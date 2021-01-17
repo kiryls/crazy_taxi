@@ -1,0 +1,204 @@
+#include "../headers/common.h"
+
+int setup(){
+    FILE * fp;
+    char key[20];
+
+    fp = fopen(CONFIG, "r");
+    if(fp == NULL){
+        return 0; 
+    }
+
+    config = (Config *) malloc(sizeof(Config));
+    if(config == NULL){ return 1; }
+
+    fscanf(fp, "%s %d\n", key, &config->SO_TAXI);
+    fscanf(fp, "%s %d\n", key, &config->SO_SOURCES);
+    fscanf(fp, "%s %d\n", key, &config->SO_HOLES);
+    fscanf(fp, "%s %d\n", key, &config->SO_TOP_CELLS);
+    fscanf(fp, "%s %d\n", key, &config->SO_CAP_MIN);
+    fscanf(fp, "%s %d\n", key, &config->SO_CAP_MAX);
+    fscanf(fp, "%s %d\n", key, &config->SO_TIMENSEC_MIN);
+    fscanf(fp, "%s %d\n", key, &config->SO_TIMENSEC_MAX);
+    fscanf(fp, "%s %d\n", key, &config->SO_TIMEOUT);
+    fscanf(fp, "%s %d\n", key, &config->SO_DURATION);
+
+    fclose(fp);
+
+    return 0;
+}
+
+void init_world (Cell ** map) {
+    int i, j;
+
+    for(i = 0; i < SO_HEIGHT; i++) {
+        for(j = 0; j < SO_WIDTH; j++) {
+            map[i][j].is_hole = 0;
+            map[i][j].num_passes = 0;
+            map[i][j].source_pid = 0;
+            map[i][j].travel_time = config->SO_TIMENSEC_MIN + rand() % (config->SO_TIMENSEC_MAX - config->SO_TIMENSEC_MIN + 1);
+            map[i][j].cap_semid = 0; 
+            map[i][j].req_semid = 0; 
+            map[i][j].req_shmid = 0;
+        }
+    }
+
+    gen_buildings(map);
+
+    for(i = 0; i < SO_HEIGHT; i++) {
+        for(j = 0; j < SO_WIDTH; j++) {
+            if(!map[i][j].is_hole) {
+                map[i][j].cap_semid = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600); /* semaforo della capienza */
+                TEST_ERROR;
+                semctl(map[i][j].cap_semid, 0, SETVAL, config->SO_CAP_MIN + rand() % (config->SO_CAP_MAX - config->SO_CAP_MIN +1)); 
+            }
+        }
+    }
+
+    gen_sources(map);
+
+    for(i = 0; i < SO_HEIGHT; i++) {
+        for(j = 0; j < SO_WIDTH; j++) {
+            if(map[i][j].source_pid > 0) {
+                map[i][j].req_semid = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600); /* semaforo sync per le richieste della cella */
+                TEST_ERROR;
+                semctl(map[i][j].req_semid, 0, SETVAL, 1); 
+
+                map[i][j].req_shmid = 0; /* id memoria per le richieste della cella */
+            }
+        }
+    }
+
+
+}
+
+void gen_buildings(Cell ** map) {
+    int i, j; 
+    int count; 
+
+    count = 0; 
+    while (count < config->SO_HOLES) {
+        i = rand() % SO_HEIGHT;
+        j = rand() % SO_WIDTH;
+
+        if (check_hole(i, j, map)) {
+            map[i][j].is_hole = 1; 
+            count++;
+        }
+    }
+}
+
+int check_hole(int x, int y, Cell ** map){
+    int i, j;
+
+    for(i = -1; i < 3; i++) {
+        for(j = -1; j < 3; j++) {
+            if ((y + i >= 0 && y + i < SO_HEIGHT) && (x + j >= 0 && x + j < SO_WIDTH) && map[y + i][x + j].is_hole == 1){
+                return 0;
+            }   
+        }
+    }
+
+    return 1;
+}
+
+
+
+void gen_sources (Cell ** map) {
+    int count, child_pid;
+    char ** args;
+    int i, j;
+
+
+    count = 0;
+    while(count < config->SO_SOURCES) {
+
+        i = rand() % SO_HEIGHT;
+        j = rand() % SO_WIDTH;
+
+        if(!map[i][j].is_hole && !map[i][j].source_pid) {
+        
+            switch(child_pid = fork()) {
+                case -1:
+                    TEST_ERROR;
+                    exit(EXIT_FAILURE);
+                    break;
+
+                case 0:
+                    args = malloc((4) * sizeof(char *));
+
+                    args[0] = malloc(sizeof(int));
+                    sprintf(args[0],"%d", map_id);
+
+                    args[1] = malloc(sizeof(int));
+                    sprintf(args[1],"%d", i);
+
+                    args[2] = malloc(sizeof(int));
+                    sprintf(args[1],"%d", j);
+
+                    args[3] = NULL;
+
+                    execvp("./source", args);
+
+                    break;
+
+                default:
+                    map[i][j].source_pid = child_pid;
+                    break;
+            }
+
+            count++;
+        }
+    }
+}
+
+
+void gen_taxi () {
+
+}
+
+void init_sync_semaphores () {
+    sync_semaphore_id = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
+    TEST_ERROR;
+
+    semctl(sync_semaphore_id, 0, SETVAL, config->SO_SOURCES + config->SO_TAXI); 
+
+}
+
+void P (int semaphore, int index) {
+    struct sembuf operation;
+
+    operation.sem_flg = 0;
+    operation.sem_num = index;
+    operation.sem_op = -1;
+
+    semop(semaphore, &operation, 1);
+}
+
+void V (int semaphore, int index) {
+    struct sembuf operation;
+
+    operation.sem_flg = 0;
+    operation.sem_num = index;
+    operation.sem_op = 1;
+
+    semop(semaphore, &operation, 1);
+}
+
+void sync_simulation(int semid, int nsem, int value){
+    struct sembuf sop;
+
+    sop.sem_num = nsem;
+    sop.sem_flg = 0;
+    sop.sem_op = value;
+
+    while(semop(semid,&sop,1) == -1) {
+        if(errno != EINTR){
+            TEST_ERROR;
+        }
+    } 
+}
+
+void cleanup () {
+
+}
