@@ -36,8 +36,11 @@
 #endif
 
 #define TAXI_ABORTED 123
+#define R 0 /* READ form pipe */
+#define W 1 /* WRITE to pipe */
+#define NARGS 8
 
-#define TEST_ERROR    if (errno) {dprintf(STDERR_FILENO,		\
+#define TEST_ERROR    if (errno) {dprintf(STDERR_FILENO, \
 					  "%s:%d: PID=%5d: Error %d (%s)\n", \
 					  __FILE__,			\
 					  __LINE__,			\
@@ -48,12 +51,18 @@
 typedef struct {
     int is_hole; /* 1 se edificio, 0 altrimenti */
     int source_pid; /* pid source oppure 0 */
-    int req_semid;
-    int req_shmid;
+    int req_access_sem;
+    int req_pipe[2];
     int cap_semid;
+    int cell_cap;
     int travel_time;
-    int num_passes;
+    int traffic;
 } Cell;
+
+typedef struct {
+    int x;
+    int y;
+} Pos;
 
 typedef struct {    
     int SO_TAXI; 
@@ -72,13 +81,16 @@ typedef struct {
 Config * config;
 int map_id;
 Cell ** map;
+char ** args;
 int sync_semaphore_id;
 sigset_t signal_mask;
 sigset_t all_signals;
+pid_t taxi_group;
+pid_t source_group;
 
 
 /* implemented methods */
-int setup ();
+int load ();
 void init_world(Cell ** map);
 void gen_buildings(Cell ** map);
 int check_hole(int x, int y, Cell ** map);
@@ -92,7 +104,7 @@ void gen_taxi ();
 // void set_signals ();
 void init_sync_semaphores ();
 /* void simulate (); */
-void cleanup ();
+void unload ();
 
 #endif 
 
