@@ -77,6 +77,28 @@ typedef struct {
     int SO_DURATION; 
 } Config;
 
+typedef struct {
+    /* taxi report on every ride */
+    int tot_length;
+    int tot_time;
+    int completed_rides;
+    
+} Report;
+
+typedef struct {
+    /* 
+        successful rides
+        aborted rides
+        unfilled rides
+
+        int ** top cells
+
+        cell-num-record taxi pid
+        travel-time-record taxi pid
+        successful-rides taxi pid
+     */
+} Stats;
+
 /* global vars */
 Config * config;
 int map_id;
