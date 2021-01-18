@@ -3,11 +3,13 @@
 int main(int argc, char const *argv[]) {
 
     Cell * cells;
-    int i, j;
+    Pos p;
+
+    srand(getpid());
 
     map_id = atoi(argv[0]);
-    i = atoi(argv[1]);
-    j = atoi(argv[2]);
+    p.y = atoi(argv[1]);
+    p.x = atoi(argv[2]);
 
     cells = (Cell*) shmat(map_id, NULL, 0);
     TEST_ERROR;
@@ -15,6 +17,8 @@ int main(int argc, char const *argv[]) {
     set_signals();
 
     sync_simulation(sync_semaphore_id, 0, -1);
+
+
     
     shmdt(cells);
     TEST_ERROR;
@@ -27,7 +31,7 @@ void set_signals () {
 
     sigemptyset(&signal_mask);
     sigaddset(&signal_mask, SIGALRM);
-    sigaddset(&signal_mask, SIGQUIT);
+    sigaddset(&signal_mask, SIGUSR1);
     sigaddset(&signal_mask, SIGINT);
 
     sigfillset(&all_signals);
@@ -39,6 +43,24 @@ void set_signals () {
 }
 
 void signal_handler (int sig) {
+    sigprocmask(SIG_BLOCK, &signal_mask, NULL);
 
+    switch (sig) {
+    case SIGALRM: /* source: genera req */
+        break;
+
+    case SIGQUIT: /* master: so_duration */
+        break;
+
+    case SIGINT: /* utente: ctrl + c */
+        raise(SIGQUIT);
+        break;
+    
+    default:
+        printf("source.c (#%3d): unhandled singnal\n", getpid() - getppid());
+        break;
+    }
+
+    sigprocmask(SIG_UNBLOCK, &signal_mask, NULL);
 }
  

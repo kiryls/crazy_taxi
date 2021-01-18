@@ -2,24 +2,18 @@
 
 int main(int argc, char const *argv[]) {
     
-    int m_id;
-    int index;
-    Cell * cells;
+    int map_id;
+    int i, j;
+    Cell * map;
     int i;
 
-    m_id = atoi(argv[0]);
-    index = atoi(argv[1]);
+    map_id = atoi(argv[0]);
 
-    cells = (Cell*) shmat(m_id, NULL, 0);
+    map = (Cell*) shmat(map_id, NULL, 0);
     TEST_ERROR;
 
-    cells[index].is_edificio = index;
-    cells[index].is_sorgente = 1 - index;
-    cells[index].num_passaggi = index + 3;
-    cells[index].tempo_percorrenza = 420 / (index+1);
-    cells[index].pid = getpid();
 
-    shmdt(cells);
+    shmdt(map);
     TEST_ERROR;
 
     return 0;
@@ -42,6 +36,22 @@ void set_signals () {
 }
 
 void signal_handler (int sig) {
+    sigprocmask(SIG_BLOCK, &signal_mask, NULL);
+
+    switch (sig) {
+    case SIGALRM:
+        break;
+
+    case SIGQUIT:
+        break;
+
+    case SIGINT:
+        break;
     
+    default:
+        break;
+    }
+
+    sigprocmask(SIG_UNBLOCK, &signal_mask, NULL);
 }
  
