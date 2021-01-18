@@ -1,16 +1,25 @@
 #include "../headers/common.h"
 
-int setup(){
+/* TODO
+    - aggiunto il campo 'cell_cap' nella struct Cell, si deve fixare l'init di tutto
+    - fare una bella print
+    - deallocazione, detach delle strutture dati
+    - processi taxi
+    - memento dei taxi (personal record & simulation record)
+    - movimento dei taxi
+    - ??? altro ???
+ */
+
+int load(){
     FILE * fp;
     char key[20];
+    int i;
 
     fp = fopen(CONFIG, "r");
-    if(fp == NULL){
-        return 0; 
-    }
+    if(fp == NULL) return 1; 
 
     config = (Config *) malloc(sizeof(Config));
-    if(config == NULL){ return 1; }
+    if(config == NULL) return 1;
 
     fscanf(fp, "%s %d\n", key, &config->SO_TAXI);
     fscanf(fp, "%s %d\n", key, &config->SO_SOURCES);
@@ -25,6 +34,10 @@ int setup(){
 
     fclose(fp);
 
+    args = malloc(NARGS * sizeof(char *));
+    for(i = 0; i < NARGS - 1; i++) args[i] = malloc(sizeof(int));
+    args[NARGS - 1] = NULL;
+
     return 0;
 }
 
@@ -34,12 +47,11 @@ void init_world (Cell ** map) {
     for(i = 0; i < SO_HEIGHT; i++) {
         for(j = 0; j < SO_WIDTH; j++) {
             map[i][j].is_hole = 0;
-            map[i][j].num_passes = 0;
             map[i][j].source_pid = 0;
-            map[i][j].travel_time = config->SO_TIMENSEC_MIN + rand() % (config->SO_TIMENSEC_MAX - config->SO_TIMENSEC_MIN + 1);
+            map[i][j].req_access_sem = 0; 
             map[i][j].cap_semid = 0; 
-            map[i][j].req_semid = 0; 
-            map[i][j].req_shmid = 0;
+            map[i][j].travel_time = config->SO_TIMENSEC_MIN + rand() % (config->SO_TIMENSEC_MAX - config->SO_TIMENSEC_MIN + 1);
+            map[i][j].traffic = 0;
         }
     }
 
@@ -60,11 +72,11 @@ void init_world (Cell ** map) {
     for(i = 0; i < SO_HEIGHT; i++) {
         for(j = 0; j < SO_WIDTH; j++) {
             if(map[i][j].source_pid > 0) {
-                map[i][j].req_semid = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600); /* semaforo sync per le richieste della cella */
+                map[i][j].req_access_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600); /* semaforo per l'accesso alla queue */
                 TEST_ERROR;
-                semctl(map[i][j].req_semid, 0, SETVAL, 1); 
+                semctl(map[i][j].req_access_sem, 0, SETVAL, 1); 
 
-                map[i][j].req_shmid = 0; /* id memoria per le richieste della cella */
+                pipe(map[i][j].req_pipe); /* pipe delle richieste */
             }
         }
     }
@@ -108,7 +120,7 @@ void gen_sources (Cell ** map) {
     int count, child_pid;
     char ** args;
     int i, j;
-
+    
 
     count = 0;
     while(count < config->SO_SOURCES) {
@@ -125,18 +137,18 @@ void gen_sources (Cell ** map) {
                     break;
 
                 case 0:
-                    args = malloc((4) * sizeof(char *));
+                    /* args = malloc((4) * sizeof(char *)); */
 
-                    args[0] = malloc(sizeof(int));
+                    /* args[0] = malloc(sizeof(int)); */
                     sprintf(args[0],"%d", map_id);
 
-                    args[1] = malloc(sizeof(int));
+                    /* args[1] = malloc(sizeof(int)); */
                     sprintf(args[1],"%d", i);
 
-                    args[2] = malloc(sizeof(int));
-                    sprintf(args[1],"%d", j);
+                    /* args[2] = malloc(sizeof(int)); */
+                    sprintf(args[2],"%d", j);
 
-                    args[3] = NULL;
+                    /* args[3] = NULL; */
 
                     execvp("./source", args);
 
@@ -144,6 +156,8 @@ void gen_sources (Cell ** map) {
 
                 default:
                     map[i][j].source_pid = child_pid;
+                    if(count == 0) source_group = child_pid; /* set first source as group leader */
+                    setpgid(child_pid, source_group); /* set all sources in the same group */
                     break;
             }
 
@@ -199,6 +213,6 @@ void sync_simulation(int semid, int nsem, int value){
     } 
 }
 
-void cleanup () {
+void unload () {
 
 }
