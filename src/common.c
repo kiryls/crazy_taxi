@@ -1,6 +1,8 @@
 #include "../headers/common.h"
 
 /* TODO
+    - finire i signal e i signal handlers in source e taxi
+    - finisco i handler in master
     - aggiunto il campo 'cell_cap' nella struct Cell, si deve fixare l'init di tutto
     - fare una bella print
     - deallocazione, detach delle strutture dati
