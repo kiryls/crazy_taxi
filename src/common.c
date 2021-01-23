@@ -1,17 +1,5 @@
 #include "../headers/common.h"
 
-/* TODO
-    - finire i signal e i signal handlers in source e taxi
-    - finisco i handler in master
-    - aggiunto il campo 'cell_cap' nella struct Cell, si deve fixare l'init di tutto
-    - fare una bella print
-    - deallocazione, detach delle strutture dati
-    - processi taxi
-    - memento dei taxi (personal record & simulation record)
-    - movimento dei taxi
-    - ??? altro ???
- */
-
 int load(){
     FILE * fp;
     char key[20];
@@ -52,19 +40,20 @@ void init_world (Cell ** map) {
             map[i][j].source_pid = 0;
             map[i][j].req_access_sem = 0; 
             map[i][j].cap_semid = 0; 
+            map[i][j].cell_cap = config->SO_CAP_MIN + rand() % (config->SO_CAP_MAX - config->SO_CAP_MIN +1);
             map[i][j].travel_time = config->SO_TIMENSEC_MIN + rand() % (config->SO_TIMENSEC_MAX - config->SO_TIMENSEC_MIN + 1);
             map[i][j].traffic = 0;
         }
     }
 
-    gen_buildings(map);
+    gen_holes(map);
 
     for(i = 0; i < SO_HEIGHT; i++) {
         for(j = 0; j < SO_WIDTH; j++) {
             if(!map[i][j].is_hole) {
                 map[i][j].cap_semid = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600); /* semaforo della capienza */
                 TEST_ERROR;
-                semctl(map[i][j].cap_semid, 0, SETVAL, config->SO_CAP_MIN + rand() % (config->SO_CAP_MAX - config->SO_CAP_MIN +1)); 
+                semctl(map[i][j].cap_semid, 0, SETVAL, map[i][j].cell_cap); 
             }
         }
     }
@@ -86,7 +75,7 @@ void init_world (Cell ** map) {
 
 }
 
-void gen_buildings(Cell ** map) {
+void gen_holes(Cell ** map) {
     int i, j; 
     int count; 
 

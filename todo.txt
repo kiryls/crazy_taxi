@@ -1,0 +1,9 @@
+- dealloco args (allocato in common.c:39)
+- finire i signal e i signal handlers in source, 
+    taxi, master
+- fare una bella print
+- deallocazione, detach delle strutture dati
+- processi taxi
+- memento dei taxi (personal record & simulation record)
+- movimento dei taxi
+- ??? altro ???

@@ -114,7 +114,7 @@ pid_t source_group;
 /* implemented methods */
 int load ();
 void init_world(Cell ** map);
-void gen_buildings(Cell ** map);
+void gen_holes(Cell ** map);
 int check_hole(int x, int y, Cell ** map);
 void gen_sources ();
 void sync_simulation (int semid, int nsem, int value);
