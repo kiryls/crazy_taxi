@@ -1,19 +1,15 @@
 CFLAGS = -std=c89 -pedantic
 
-
-all: master child reader
+all: master source #taxi
 
 clean:
-	rm -f *.o master child reader *~
+	rm -f objs/*.o objs/master objs/child  objs/*~
 
-master: master.c common.h makefile
-	gcc $(CFLAGS) master.c -o master
+master: src/master.c headers/common.h makefile
+	gcc $(CFLAGS) src/master.c -o objs/master
 
-child: child.c common.h makefile
-	gcc $(CFLAGS) child.c -o child
-
-reader: reader.c common.h makefile
-	gcc $(CFLAGS) reader.c -o reader
+source: src/source.c headers/common.h makefile
+	gcc $(CFLAGS) src/source.c -o objs/source
 
 
 run:  all
