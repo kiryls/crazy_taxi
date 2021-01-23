@@ -225,6 +225,11 @@ void unload () {
 
     semctl(sync_semaphore_id, 0, IPC_RMID);
 
-    /* detach e deallocazione map */
+    /* detach & deallocazione map */
+    shmdt(map);
+    TEST_ERROR;
+
+    shmctl(map_id, IPC_RMID, NULL);
+
     
 }
