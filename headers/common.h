@@ -39,6 +39,9 @@
 #define R 0 /* READ form pipe */
 #define W 1 /* WRITE to pipe */
 #define NARGS 8
+#define ABS(X) (((X)>0)*(X) + ((X)<=0)*(~(X)+1))
+
+typedef enum {UP, DOWN, LEFT, RIGHT} Dir;
 
 #define TEST_ERROR    if (errno) {dprintf(STDERR_FILENO, \
 					  "%s:%d: PID=%5d: Error %d (%s)\n", \
@@ -123,8 +126,8 @@ void V (int semaphore, int index);
 
 /* to implement methods */
 void gen_taxi ();
-// void set_signals ();
-void init_sync_semaphores ();
+/* void set_signals (); */
+
 /* void simulate (); */
 void unload ();
 
