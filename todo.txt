@@ -1,11 +1,12 @@
-- dealloco args (allocato in common.c:39)
 - rivedo le malloc per array args (in source.c:131)
 - finire i signal e i signal handlers in source, 
     taxi, master
 - fare una bella print
 - deallocazione, detach delle strutture dati
-- processi taxi
+- processi taxi 
+    (il taxi abortito libera spazio a un nuovo taxi)
 - memento dei taxi (personal record & simulation record)
+- funzione update_ledger dei taxi
 - movimento dei taxi
 - ??? altro ???
-- group pid per source & taxi
+- group pid per source & taxi 
