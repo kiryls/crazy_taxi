@@ -24,9 +24,15 @@ int load(){
 
     fclose(fp);
 
+    /* creazione array ARGS per passare info ai processi creati */
     args = malloc(NARGS * sizeof(char *));
     for(i = 0; i < NARGS - 1; i++) args[i] = malloc(sizeof(int));
     args[NARGS - 1] = NULL;
+
+    /* crazione semaforo per sincronizzare la partenza della sim */
+    sync_semaphore_id = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
+    TEST_ERROR;
+    semctl(sync_semaphore_id, 0, SETVAL, config->SO_SOURCES + config->SO_TAXI); 
 
     return 0;
 }
@@ -168,14 +174,6 @@ void gen_taxi () {
 
 }
 
-void init_sync_semaphores () {
-    sync_semaphore_id = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
-    TEST_ERROR;
-
-    semctl(sync_semaphore_id, 0, SETVAL, config->SO_SOURCES + config->SO_TAXI); 
-
-}
-
 void P (int semaphore, int index) {
     struct sembuf operation;
 
@@ -211,5 +209,22 @@ void sync_simulation(int semid, int nsem, int value){
 }
 
 void unload () {
+    int i, j;
+
     /* 1. dealloco args */
+    for(i = 0; i < NARGS; i++) free(args[i]);
+    free(args);
+
+    /* 2. rimuovo i semafori */
+    for(i = 0; i < SO_HEIGHT; i++) {
+        for(j = 0; j < SO_WIDTH; j++) {
+            if(!map[i][j].is_hole) semctl(map[i][j].cap_semid, 0, IPC_RMID);
+            if(map[i][j].source_pid > 0) semctl(map[i][j].req_access_sem, 0, IPC_RMID);
+        }
+    }
+
+    semctl(sync_semaphore_id, 0, IPC_RMID);
+
+    /* detach e deallocazione map */
+    
 }
