@@ -14,13 +14,7 @@ int main(int argc, char *argv[]) {
     
     load();
 
-    map_id = shmget(IPC_PRIVATE, sizeof(Cell) * SO_WIDTH*SO_HEIGHT, S_IRUSR | S_IWUSR);
-    TEST_ERROR;
-
-    map = (Cell**) shmat(map_id, NULL, 0);
-    TEST_ERROR;
-
-    init_world(map);
+    init_world();
 
     sync_simulation(sync_semaphore_id, 0, 0);
 
