@@ -97,7 +97,7 @@ typedef struct {
         travel-time-record taxi pid
         successful-rides taxi pid
      */
-} Stats;
+} Ledger;
 
 /* global vars */
 Config * config;
