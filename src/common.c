@@ -31,8 +31,14 @@ int load(){
     return 0;
 }
 
-void init_world (Cell ** map) {
+void init_world () {
     int i, j;
+
+    map_id = shmget(IPC_PRIVATE, sizeof(Cell) * SO_WIDTH*SO_HEIGHT, S_IRUSR | S_IWUSR);
+    TEST_ERROR;
+
+    map = (Cell**) shmat(map_id, NULL, 0);
+    TEST_ERROR;
 
     for(i = 0; i < SO_HEIGHT; i++) {
         for(j = 0; j < SO_WIDTH; j++) {
@@ -46,7 +52,7 @@ void init_world (Cell ** map) {
         }
     }
 
-    gen_holes(map);
+    gen_holes();
 
     for(i = 0; i < SO_HEIGHT; i++) {
         for(j = 0; j < SO_WIDTH; j++) {
@@ -58,7 +64,7 @@ void init_world (Cell ** map) {
         }
     }
 
-    gen_sources(map);
+    gen_sources();
 
     for(i = 0; i < SO_HEIGHT; i++) {
         for(j = 0; j < SO_WIDTH; j++) {
@@ -75,7 +81,7 @@ void init_world (Cell ** map) {
 
 }
 
-void gen_holes(Cell ** map) {
+void gen_holes() {
     int i, j; 
     int count; 
 
@@ -84,14 +90,14 @@ void gen_holes(Cell ** map) {
         i = rand() % SO_HEIGHT;
         j = rand() % SO_WIDTH;
 
-        if (check_hole(i, j, map)) {
+        if (check_hole(i, j)) {
             map[i][j].is_hole = 1; 
             count++;
         }
     }
 }
 
-int check_hole(int x, int y, Cell ** map){
+int check_hole(int x, int y){
     int i, j;
 
     for(i = -1; i < 3; i++) {
@@ -107,7 +113,7 @@ int check_hole(int x, int y, Cell ** map){
 
 
 
-void gen_sources (Cell ** map) {
+void gen_sources () {
     int count, child_pid;
     char ** args;
     int i, j;
@@ -205,5 +211,5 @@ void sync_simulation(int semid, int nsem, int value){
 }
 
 void unload () {
-
+    /* 1. dealloco args */
 }
