@@ -113,9 +113,9 @@ pid_t source_group;
 
 /* implemented methods */
 int load ();
-void init_world(Cell ** map);
-void gen_holes(Cell ** map);
-int check_hole(int x, int y, Cell ** map);
+void init_world();
+void gen_holes();
+int check_hole(int x, int y);
 void gen_sources ();
 void sync_simulation (int semid, int nsem, int value);
 void P (int semaphore, int index);
