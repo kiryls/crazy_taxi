@@ -2,7 +2,6 @@
 
 int main(int argc, char const *argv[]) {
 
-    Cell * cells;
     Pos p;
 
     srand(getpid());
@@ -11,16 +10,19 @@ int main(int argc, char const *argv[]) {
     p.y = atoi(argv[1]);
     p.x = atoi(argv[2]);
 
-    cells = (Cell*) shmat(map_id, NULL, 0);
+    map = (Cell*) shmat(map_id, NULL, 0);
     TEST_ERROR;
     
     set_signals();
+
+    /* chiudo la pipe richieste in lettura */
+    close(map[p.y][p.x].req_pipe[R]);
 
     sync_simulation(sync_semaphore_id, 0, -1);
 
 
     
-    shmdt(cells);
+    shmdt(map);
     TEST_ERROR;
 
     return 0;
