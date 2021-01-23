@@ -73,17 +73,17 @@ void set_signals() {
     /* set behaviour to print map */
     sa.sa_handler = print_map_handler;
 
-    /* put process in listening to SIGALRM & SIGINT */
+    /* put process in listening to SIGALRM */
     sigaction(SIGALRM,&sa,NULL);
-    TEST_ERROR;
-    sigaction(SIGINT, &sa, NULL);
     TEST_ERROR;
 
     /* set behaviour to wrap up */
     sa.sa_handler = wrap_up;
 
-    /* put process in listening to SIGQUIT */
+    /* put process in listening to SIGQUIT & SIGINT*/
     sigaction(SIGQUIT,&sa,NULL);
+    TEST_ERROR;
+    sigaction(SIGINT, &sa, NULL);
     TEST_ERROR;
 }
 
