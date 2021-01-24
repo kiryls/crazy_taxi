@@ -1,5 +1,6 @@
 - rivedo le malloc per array args (in source.c:131)
 - rivedo l'aborted (master.c:27) 
+- in source/master creazione e gestione pipes
 - finire i signal e i signal handlers in source, 
     taxi, master
 - put_req() handler per le source
