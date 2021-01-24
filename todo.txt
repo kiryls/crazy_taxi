@@ -14,3 +14,4 @@
 - movimento dei taxi
 - ??? altro ???
 - group pid per source & taxi 
+- verifico che tutti i processi abbiano fatto detach e close pipe
