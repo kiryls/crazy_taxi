@@ -159,8 +159,8 @@ void gen_sources () {
 
                 default:
                     map[i][j].source_pid = child_pid;
-                    if(count == 0) source_group = child_pid; /* set first source as group leader */
-                    setpgid(child_pid, source_group); /* set all sources in the same group */
+                    if(count == 0) source_gpid = child_pid; /* set first source as group leader */
+                    setpgid(child_pid, source_gpid); /* set all sources in the same group */
                     break;
             }
 
@@ -225,11 +225,44 @@ void unload () {
 
     semctl(sync_semaphore_id, 0, IPC_RMID);
 
-    /* detach & deallocazione map */
+    /* 3. detach & deallocazione map */
     shmdt(map);
     TEST_ERROR;
 
     shmctl(map_id, IPC_RMID, NULL);
+}
 
+void print_map () {
+    int i, j;
+    char s[4];
+    int traffic;
+
+    printf("\n+");
+
+    for (j = 0; j < SO_WIDTH; j++) printf("---+");
+
+    for(i = 0; i < SO_HEIGHT; i++){
+        printf("\n|");
+        for(j = 0; j < SO_WIDTH; j++){
+
+            switch(map[i][j].is_hole) {
+                case 1: printf(HOLE "   " ENDSTYLE); break;
+
+                default:
+                    if (map[i][j].source_pid > 0) printf(SOURCE);
+                    if(!semctl(map[i][j].cap_semid, 0, GETVAL)) printf(BUSY);
+                    traffic = map[i][j].cell_cap - semctl(map[i][j].cap_semid, 0, GETVAL);
+                    sprintf(s,"%2d ", traffic);
+                    printf("%s" ENDSTYLE, traffic == 0 ? "   " : s);
+            }
+
+            printf("|");
+        }
     
+        printf("\n+");
+        for (j = 0; j < SO_WIDTH; j++){ printf("---+"); }
+    }
+    printf("\n\n");
+
+
 }
