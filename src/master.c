@@ -89,9 +89,11 @@ void set_signals() {
 
 void print_map_handler(int sig) {
     sigprocmask(SIG_BLOCK, &signal_mask, NULL);
+    killpg(taxi_gpid, SIGSTOP);
 
-    
+    print_map();
 
+    killpg(taxi_gpid, SIGCONT);
     sigprocmask(SIG_UNBLOCK, &signal_mask, NULL);
 }
 
