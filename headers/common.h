@@ -102,9 +102,14 @@ typedef struct {
 
 typedef struct {
     /* 
+        ### source_section_semid ###
+        tot_reqs
+
+
+        ### taxi_section_semid ###
         successful rides
         aborted rides
-        unfilled rides
+        (unfilled rides)
 
         int ** top cells
 

@@ -171,7 +171,7 @@ void gen_sources () {
 
 
 void gen_taxi () {
-
+    
 }
 
 void P (int semaphore, int index) {
