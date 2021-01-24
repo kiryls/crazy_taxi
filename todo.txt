@@ -1,4 +1,5 @@
 - rivedo le malloc per array args (in source.c:131)
+- rivedo l'aborted (master.c:27) 
 - finire i signal e i signal handlers in source, 
     taxi, master
 - put_req() handler per le source
