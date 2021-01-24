@@ -171,7 +171,7 @@ void gen_sources () {
 
 
 void gen_taxi () {
-    
+
 }
 
 void P (int semaphore, int index) {
@@ -230,6 +230,7 @@ void unload () {
     TEST_ERROR;
 
     shmctl(map_id, IPC_RMID, NULL);
+    TEST_ERROR;
 }
 
 void print_map () {
