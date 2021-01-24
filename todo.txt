@@ -1,10 +1,12 @@
 - rivedo le malloc per array args (in source.c:131)
 - finire i signal e i signal handlers in source, 
     taxi, master
+- put_req() handler per le source
 - fare una bella print
 - deallocazione, detach delle strutture dati
 - processi taxi 
     (il taxi abortito libera spazio a un nuovo taxi)
+- get_req() handler (oppure no) per i taxi
 - memento dei taxi (personal record & simulation record)
 - funzione update_ledger dei taxi
 - movimento dei taxi
