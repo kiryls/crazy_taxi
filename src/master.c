@@ -18,8 +18,10 @@ int main(int argc, char *argv[]) {
 
     sync_simulation(sync_semaphore_id, 0, 0);
 
-    for(i = 0; i < config->SO_DURATION; i++) alarm(1);
-
+    for(i = 0; i < config->SO_DURATION; i++) {
+        sleep(1);
+        raise(SIGALRM);
+    }
     raise(SIGQUIT); /* wrap-up the simulation after SO_DURATION seconds */
 
     aborted = 0;
@@ -28,8 +30,12 @@ int main(int argc, char *argv[]) {
         if(WEXITSTATUS(status) == TAXI_ABORTED) aborted++;
     }
 
+    unload();
 
-    switch(child = fork()) {
+    exit(EXIT_SUCCESS);
+
+
+    /* switch(child = fork()) {
         case -1:
             TEST_ERROR;
             exit(EXIT_FAILURE);
@@ -49,13 +55,7 @@ int main(int argc, char *argv[]) {
 
         default:
             break;
-    }
-
-
-    shmctl(map_id, 0, IPC_RMID);
-    TEST_ERROR;
-
-    exit(EXIT_SUCCESS);
+    } */
 }
 
 void set_signals() {
