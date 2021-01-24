@@ -22,17 +22,29 @@
 #include <sys/stat.h>
 
 #define DENSE 0
+#define STYLE 1
 
 #if DENSE
-#define SO_WIDTH
-#define SO_HEIGHT
-#define CONFIG "./config/config_dense.txt"
+    #define SO_WIDTH
+    #define SO_HEIGHT
+    #define CONFIG "./config/config_dense.txt"
 
 #else 
-#define SO_HEIGHT 4 
-#define SO_WIDTH  4
-#define CONFIG "./config/config_custom.txt"
+    #define SO_HEIGHT 4 
+    #define SO_WIDTH  4
+    #define CONFIG "./config/config_custom.txt"
+#endif
 
+#if STYLE
+    #define HOLE "\x1b[37m\x1b[47m" 
+    #define SOURCE "\x1b[42m\x1b[30m"  
+    #define ENDSTYLE "\x1b[0m" 
+    #define BUSY "\x1b[31m"
+#else
+    #define HOLE "" 
+    #define SOURCE ""  
+    #define ENDSTYLE "" 
+    #define BUSY ""
 #endif
 
 #define TAXI_ABORTED 123
@@ -110,26 +122,28 @@ char ** args;
 int sync_semaphore_id;
 sigset_t signal_mask;
 sigset_t all_signals;
-pid_t taxi_group;
-pid_t source_group;
+pid_t taxi_gpid;
+pid_t source_gpid;
 
 
 /* implemented methods */
-int load ();
-void init_world();
-void gen_holes();
-int check_hole(int x, int y);
-void gen_sources ();
-void sync_simulation (int semid, int nsem, int value);
-void P (int semaphore, int index);
-void V (int semaphore, int index);
+int     load ();
+void    init_world();
+void    gen_holes();
+int     check_hole(int x, int y);
+void    gen_sources ();
+void    sync_simulation (int semid, int nsem, int value);
+void    P (int semaphore, int index);
+void    V (int semaphore, int index);
+void    print_map();
+void    unload ();
 
 /* to implement methods */
-void gen_taxi ();
+void    gen_taxi ();
 /* void set_signals (); */
 
 /* void simulate (); */
-void unload ();
+
 
 #endif 
 
