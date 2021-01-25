@@ -4,7 +4,7 @@ all: master source
 
 clean:
 	ipcrm -a
-	rm -f out/*.o out/master out/source  out/*~
+	rm -f out/*.o out/master out/source  out/*~ logs/*
 
 run:  all
 	./out/master
