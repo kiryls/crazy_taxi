@@ -31,7 +31,7 @@
 
 #else 
     #define SO_HEIGHT 4 
-    #define SO_WIDTH  4
+    #define SO_WIDTH  6
     #define CONFIG "./config/config_custom.txt"
 #endif
 
@@ -101,6 +101,7 @@ typedef struct {
 } Report;
 
 typedef struct {
+    int STUD;
     /* 
         ### source_section_semid ###
         tot_reqs
@@ -121,12 +122,18 @@ typedef struct {
 
 /* global vars */
 Config * config;
+
 int map_id;
-Cell ** map;
+int * map_row_ids;
+Cell * map[SO_HEIGHT];
+
 char ** args;
+
 int sync_semaphore_id;
+
 sigset_t signal_mask;
 sigset_t all_signals;
+
 pid_t taxi_gpid;
 pid_t source_gpid;
 
