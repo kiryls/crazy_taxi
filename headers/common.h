@@ -75,9 +75,10 @@ typedef struct {
 } Cell;
 
 typedef struct {
-    int x;
-    int y;
+    int r;
+    int c;
 } Pos;
+
 
 typedef struct {    
     int SO_TAXI; 
@@ -131,8 +132,7 @@ char ** args;
 
 int sync_semaphore_id;
 
-sigset_t signal_mask;
-sigset_t all_signals;
+sigset_t mask;
 
 pid_t taxi_gpid;
 pid_t source_gpid;
