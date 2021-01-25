@@ -31,7 +31,7 @@ int load(){
 
     /* crazione semaforo per sincronizzare la partenza della sim */
     sync_semaphore_id = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
-    TEST_ERROR;
+    /* TEST_ERROR; */
     semctl(sync_semaphore_id, 0, SETVAL, config->SO_SOURCES /* + config->SO_TAXI */); 
 
     return 0;
@@ -135,6 +135,8 @@ void gen_sources () {
         j = rand() % SO_WIDTH;
 
         if(!map[i][j].is_hole && !map[i][j].source_pid) {
+
+            pipe(map[i][j].req_pipe);
         
             switch(child_pid = fork()) {
                 case -1:
@@ -152,7 +154,7 @@ void gen_sources () {
                     break;
 
                 default:
-                    /* map[i][j].source_pid = child_pid; */
+                    close(map[i][j].req_pipe[W]);
                     if(count == 0) source_gpid = child_pid; /* set first source as group leader */
                     setpgid(child_pid, source_gpid); /* set all sources in the same group */
                     break;
@@ -217,7 +219,7 @@ void unload () {
             if(map[i][j].source_pid > 0) {
               semctl(map[i][j].req_access_sem, 0, IPC_RMID); 
               close(map[i][j].req_pipe[R]); 
-              close(map[i][j].req_pipe[W]); /* da spostare in gen_sources */
+              /* close(map[i][j].req_pipe[W]); */ /* da spostare in gen_sources */
             }
         }
     }
@@ -253,7 +255,7 @@ void print_map () {
                 default:
                     if (map[i][j].source_pid > 0) printf(SOURCE);
                     if(!semctl(map[i][j].cap_semid, 0, GETVAL)) printf(BUSY);
-                    traffic = map[i][j].cell_cap /* - semctl(map[i][j].cap_semid, 0, GETVAL) */;
+                    traffic = map[i][j].cell_cap - semctl(map[i][j].cap_semid, 0, GETVAL);
                     sprintf(s,"%2d ", traffic);
                     printf("%s" ENDSTYLE, traffic == 0 ? "   " : s);
             }
