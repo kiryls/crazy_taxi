@@ -1,7 +1,7 @@
-#ifndef SOURCE
-#define SOURCE
 
+Pos p;
+
+void init(const char * argv[]);
 void set_signals();
 void signal_handler(int sig);
-
-#endif
+void signal_handler (int sig);
