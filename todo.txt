@@ -1,5 +1,7 @@
 - rivedo le malloc per array args (in source.c:131)
+- quando aggiungo i taxi, fixo sync_semaphore_id (in common.c:35)
 - rivedo l'aborted (master.c:27) 
+- TEST_ERROR deve stare dentro i rispettivi if!!!
 - in source/master creazione e gestione pipes
 - finire i signal e i signal handlers in source, 
     taxi, master
