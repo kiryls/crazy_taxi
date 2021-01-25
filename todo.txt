@@ -1,19 +1,30 @@
-- rivedo le malloc per array args (in source.c:131)
-- quando aggiungo i taxi, fixo sync_semaphore_id (in common.c:35)
-- rivedo l'aborted (master.c:27) 
-- TEST_ERROR deve stare dentro i rispettivi if!!!
-- in source/master creazione e gestione pipes
-- finire i signal e i signal handlers in source, 
-    taxi, master
-- put_req() handler per le source
-- fare una bella print
-- deallocazione, detach delle strutture dati
+- quando aggiungo i taxi, agigungo SO_TAXI 
+        al sync_semaphore_id (in common.c:35)
+
+
+- finire i signal e i signal handlers in taxi
+
 - processi taxi 
     (il taxi abortito libera spazio a un nuovo taxi)
+
 - get_req() handler (oppure no) per i taxi
+
 - memento dei taxi (personal record & simulation record)
+
 - funzione update_ledger dei taxi
+
 - movimento dei taxi
+
 - ??? altro ???
+
 - group pid per source & taxi 
+
+- il sync_simulation() non deve essere piu' toccato dopo il respawn dei taxi
+
+
+#############################################################################
+- (((rivedo le malloc per array args (in source.c:131))))
+- deallocazione, detach delle strutture dati
+- TEST_ERROR deve stare dentro i rispettivi if!!!
 - verifico che tutti i processi abbiano fatto detach e close pipe
+
