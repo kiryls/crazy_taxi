@@ -1,31 +1,53 @@
 #include "../headers/common.h"
+#include "../headers/source.h"
 
 int main(int argc, char const *argv[]) {
 
-    Pos p;
+    int i;
+    int sem_ret;
 
     srand(getpid());
+    
+    init(argv);
 
-    map_id = atoi(argv[0]);
+    printf("child created w/ pid: %d, parent pid: %d, pos (%d,%d)\n", getpid(), getppid(), p.y+1, p.x+1);
+
+    set_signals();
+    
+    /* chiudo la pipe richieste in lettura */
+    
+    sync_simulation(sync_semaphore_id, 0, -1);
+    printf("source %d pronta\n", getpid());
+
+    sleep(6);
+
+    close(map[p.y][p.x].req_pipe[W]);
+    
+    for(i = 0; i < SO_HEIGHT; i++) shmdt(map[i]);
+    shmdt(map);
+    /* TEST_ERROR; */
+
+    exit(EXIT_SUCCESS);
+}
+
+void init (const char * argv[]) {
+    int i;
+
+    map_id = atoi(argv[0]); 
     p.y = atoi(argv[1]);
     p.x = atoi(argv[2]);
+    sync_semaphore_id = atoi(argv[3]);
 
-    map = (Cell*) shmat(map_id, NULL, 0);
-    TEST_ERROR;
-    
-    set_signals();
+    map_row_ids = (int*) shmat(map_id, NULL, 0);
+    for(i = 0; i < SO_HEIGHT; i++) map[i] = shmat(map_row_ids[i], NULL, 0);
 
-    /* chiudo la pipe richieste in lettura */
+    map[p.y][p.x].source_pid = getpid();
+
+    map[p.y][p.x].req_access_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
+    semctl(map[p.y][p.x].req_access_sem, 0, SETVAL, 1);
+
+    pipe(map[p.y][p.x].req_pipe);
     close(map[p.y][p.x].req_pipe[R]);
-
-    sync_simulation(sync_semaphore_id, 0, -1);
-
-
-    
-    shmdt(map);
-    TEST_ERROR;
-
-    return 0;
 }
 
 void set_signals () {

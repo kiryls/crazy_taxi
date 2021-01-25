@@ -1,36 +1,52 @@
 #include "../headers/common.h"
+#include "../headers/master.h"
 
 int main(int argc, char *argv[]) {
 
     int i, j;
     char ** args;
     int status;
-    int aborted;
-    int count;
     int child;
     
-    
     srand(time(NULL));
-    
-    load();
+
+    if (load()) exit(EXIT_FAILURE);
+    printf("loading completed\n");
 
     init_world();
+    printf("world created\n");
+
+    set_signals();
+    printf("signals set\n");
 
     sync_simulation(sync_semaphore_id, 0, 0);
+
+    printf("si puo' simulare\n");
 
     for(i = 0; i < config->SO_DURATION; i++) {
         sleep(1);
         raise(SIGALRM);
+        print_map();
     }
     raise(SIGQUIT); /* wrap-up the simulation after SO_DURATION seconds */
 
-    aborted = 0;
+    
 
-    while(wait(&status) > 0) {
-        if(WEXITSTATUS(status) == TAXI_ABORTED) aborted++;
+    /* sleep(2); */
+    while((child = wait(&status)) > 0) {
+        printf("(%d) terminated\n", child);
     }
 
+    if(errno == ECHILD) printf("all children terminated successfully\n");
+    
+    else {
+        fprintf(stderr, "Error #%d: %s\n", errno, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    
     unload();
+
+    printf("unloaded all structures\n");
 
     exit(EXIT_SUCCESS);
 
@@ -88,19 +104,22 @@ void set_signals() {
 }
 
 void print_map_handler(int sig) {
-    sigprocmask(SIG_BLOCK, &signal_mask, NULL);
+    printf("raised periodic alarm\n");
+
+    /* sigprocmask(SIG_BLOCK, &signal_mask, NULL);
     killpg(taxi_gpid, SIGSTOP);
 
     print_map();
 
     killpg(taxi_gpid, SIGCONT);
-    sigprocmask(SIG_UNBLOCK, &signal_mask, NULL);
+    sigprocmask(SIG_UNBLOCK, &signal_mask, NULL); */
 }
 
 void wrap_up(int sig) {
-    sigprocmask(SIG_BLOCK, &signal_mask, NULL);
+    printf("raised wrap up signal\n");
+    /* sigprocmask(SIG_BLOCK, &signal_mask, NULL);
 
-    sigprocmask(SIG_UNBLOCK, &signal_mask, NULL);
+    sigprocmask(SIG_UNBLOCK, &signal_mask, NULL); */
 }
 
 
