@@ -4,8 +4,6 @@
 int main(int argc, char const *argv[]) {
 
     int i;
-    int sem_ret;
-    int count;
 
     srand(getpid());
     
@@ -13,12 +11,9 @@ int main(int argc, char const *argv[]) {
 
     set_signals();
     
-    sync_simulation(sync_semaphore_id, 0, -1);
+    sync_simulation(sync_sources_sem, 0, -1);
 
-    printf("source %d paused\n", getpid());
-    pause();
-    printf("source %d resumed\n", getpid());
-
+    pause(); /* pause until SIGCONT form master */
 
     while(1) {
         sleep(2);
@@ -34,7 +29,7 @@ void init (const char * argv[]) {
     map_id = atoi(argv[0]); 
     p.r = atoi(argv[1]);
     p.c = atoi(argv[2]);
-    sync_semaphore_id = atoi(argv[3]);
+    sync_sources_sem = atoi(argv[3]);
 
     tot_reqs = 0;
 
@@ -48,11 +43,11 @@ void init (const char * argv[]) {
 
     close(map[p.r][p.c].req_pipe[R]);
 
-    fp = fopen("/home/kiryls/Documents/Coding/project/logs/src.log", "a");
+    logp = fopen("/home/kiryls/Documents/Coding/project/logs/src.log", "a");
 }
 
-void write_log(FILE * fp, Pos dest) {
-    fprintf(fp, "%d @ (%d,%d): (PPID=%d | PGID=%d) request #%d -> (%d,%d)\n",
+void write_log(FILE * logp, Pos dest) {
+    fprintf(logp, "%d @ (%d,%d): (PPID=%d | PGID=%d) request #%d -> (%d,%d)\n",
             getpid(), p.r+1, p.c+1,
             getppid(), getpgid(getpid()), 
             tot_reqs, dest.r+1, dest.c+1);
@@ -101,7 +96,7 @@ void gen_req (int sig) {
 
     tot_reqs++;
 
-    write_log(fp, dest);
+    write_log(logp, dest);
 
     /* sigprocmask(SIG_UNBLOCK, &alarm, NULL); */
 }
@@ -118,9 +113,9 @@ void termination (int sig) {
             if(shmdt(map[i])) TEST_ERROR;
         if(shmdt(map_row_ids)) TEST_ERROR;
 
-        fclose(fp);
+        fclose(logp);
 
-        printf("source (%d) terminated\n", getpid());
+        fprintf(logp, "source (%d) terminated successfully\n", getpid());
 
         exit(EXIT_SUCCESS);
 
@@ -130,6 +125,6 @@ void termination (int sig) {
 }
 
 void resume (int sig) {
-    fprintf(fp, "*** resuming source %d ***\n", getpid());
+    fprintf(logp, "[resuming source %d]\n", getpid());
 }
  
