@@ -94,14 +94,6 @@ typedef struct {
 } Config;
 
 typedef struct {
-    /* taxi report on every ride */
-    int tot_length;
-    int tot_time;
-    int completed_rides;
-    
-} Report;
-
-typedef struct {
     int STUD;
     /* 
         ### source_section_semid ###
@@ -122,20 +114,21 @@ typedef struct {
 } Ledger;
 
 /* global vars */
-Config * config;
+Config *    config;
 
-int map_id;
-int * map_row_ids;
-Cell * map[SO_HEIGHT];
+int         map_id;
+int         *map_row_ids;
+Cell        *map[SO_HEIGHT];
 
-char ** args;
+char        **args;
 
-int sync_semaphore_id;
+int         sync_sources_sem;
+int         sync_taxi_sem;
 
-sigset_t mask;
+sigset_t    mask;
 
-pid_t taxi_gpid;
-pid_t source_gpid;
+pid_t       taxi_gpid;
+pid_t       source_gpid;
 
 
 /* implemented methods */
@@ -152,6 +145,7 @@ void    unload ();
 
 /* to implement methods */
 void    gen_taxi ();
+int     gen_one_taxi (int i, int j);
 /* void set_signals (); */
 
 /* void simulate (); */
