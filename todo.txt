@@ -1,6 +1,12 @@
+- SIGSTOP ai processi taxi prima di chiamare gen_one_taxi per poterlo piazzare
+    senza che nessuno rompa
+
+- aggiungo alla generazione dei taxi anche la shm del Ledger
+
 - quando aggiungo i taxi, agigungo SO_TAXI 
         al sync_semaphore_id (in common.c:35)
 
+- devo chiudere il file taxi.log aperto nell'init del taxi
 
 - finire i signal e i signal handlers in taxi
 
@@ -27,4 +33,5 @@
 - deallocazione, detach delle strutture dati
 - TEST_ERROR deve stare dentro i rispettivi if!!!
 - verifico che tutti i processi abbiano fatto detach e close pipe
-
+- pensiamo ad un posto migliore per la generazione delle pipe 
+        e nella chiusura dei file descriptor per il master
