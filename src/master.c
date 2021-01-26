@@ -19,7 +19,8 @@ int main(int argc, char *argv[]) {
     set_signals();
     printf("signals set\n");
 
-    sync_simulation(sync_semaphore_id, 0, 0);
+    sync_simulation(sync_sources_sem, 0, 0);
+    sync_simulation(sync_taxi_sem, 0, 0);
 
     printf("start simulation\n");
     
@@ -30,8 +31,6 @@ int main(int argc, char *argv[]) {
         raise(SIGALRM);
     }
     raise(SIGQUIT); /* wrap-up the simulation after SO_DURATION seconds */
-
-    /* read(map[i][j].req_pipe[R], &dest, sizeof(Pos)); */
 
     while((child = wait(&status)) > 0) {}
 
@@ -102,16 +101,19 @@ void set_signals() {
 
 void print_map_handler(int sig) {
     killpg(source_gpid, SIGSTOP);
+    killpg(taxi_gpid, SIGSTOP);
 
     print_map();
 
     killpg(source_gpid, SIGCONT);
+    killpg(taxi_gpid, SIGCONT);
 }
 
 void wrap_up(int sig) {
     /* sigprocmask(SIG_BLOCK, &signal_mask, NULL); */
 
     killpg(source_gpid, SIGQUIT);
+    killpg(taxi_gpid, SIGQUIT);
 
     /* sigprocmask(SIG_UNBLOCK, &signal_mask, NULL); */
 }
