@@ -1,7 +1,7 @@
 
 Pos p;
 int tot_reqs;
-FILE * fp;
+FILE * logp;
 
 void init(const char * argv[]);
 void write_log(FILE * fp, Pos dest);
