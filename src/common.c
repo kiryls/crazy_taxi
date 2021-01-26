@@ -29,10 +29,15 @@ int load(){
     for(i = 0; i < NARGS - 1; i++) args[i] = malloc(sizeof(int));
     args[NARGS - 1] = NULL;
 
-    /* crazione semaforo per sincronizzare la partenza della sim */
-    sync_semaphore_id = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
+    /* semaforo sync creazione sorgenti */
+    sync_sources_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
     /* TEST_ERROR; */
-    semctl(sync_semaphore_id, 0, SETVAL, config->SO_SOURCES /* + config->SO_TAXI */); 
+    semctl(sync_sources_sem, 0, SETVAL, config->SO_SOURCES); 
+
+    /* semaforo sync creazione taxi */
+    sync_taxi_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
+    /* TEST_ERROR; */
+    semctl(sync_taxi_sem, 0, SETVAL, config->SO_SOURCES); 
 
     return 0;
 }
@@ -74,20 +79,6 @@ void init_world () {
     }
 
     gen_sources();
-
-    /* for(i = 0; i < SO_HEIGHT; i++) {
-        for(j = 0; j < SO_WIDTH; j++) {
-            if(map[i][j].source_pid > 0) {
-                map[i][j].req_access_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600); 
-                
-                semctl(map[i][j].req_access_sem, 0, SETVAL, 1); 
-
-                pipe(map[i][j].req_pipe); 
-            }
-        }
-    } */
-
-
 }
 
 void gen_holes() {
@@ -148,13 +139,15 @@ void gen_sources () {
                     sprintf(args[0],"%d", map_id);
                     sprintf(args[1],"%d", i);
                     sprintf(args[2],"%d", j);
-                    sprintf(args[3],"%d", sync_semaphore_id);
+                    sprintf(args[3],"%d", sync_sources_sem);
                     exec_ret = execvp("./out/source", args);
-                    fprintf(stderr, "errore dopo la execvp: %d\n", exec_ret);
+                    fprintf(stderr, "errore nella exec delle sources: %d\n", exec_ret);
                     break;
 
                 default:
+                    close(map[i][j].req_pipe[R]);
                     close(map[i][j].req_pipe[W]);
+
                     if(count == 0) source_gpid = child_pid; /* set first source as group leader */
                     setpgid(child_pid, source_gpid); /* set all sources in the same group */
                     break;
@@ -167,7 +160,45 @@ void gen_sources () {
 
 
 void gen_taxi () {
+    int i, j, count, child_pid;
 
+    count = 0;
+    while(count < config->SO_TAXI) {
+
+        i = rand() % SO_HEIGHT;
+        j = rand() % SO_WIDTH;
+
+        if(semctl(map[i][j].cap_semid, 0, GETVAL) > 0 && !map[i][j].is_hole) {
+            child_pid = gen_one_taxi(i, j);
+            if(count == 0) taxi_gpid = child_pid;
+            setpgid(child_pid, taxi_gpid);
+            count++;
+        }
+
+    }
+}
+
+int gen_one_taxi (int i, int j) {
+    int child_pid, exec_ret;
+
+    P(map[i][j].cap_semid, 0);
+
+    switch(child_pid = fork()) {
+        case -1:
+            TEST_ERROR;
+            exit(EXIT_FAILURE);
+
+        case 0:
+            sprintf(args[0], "%d", map_id);
+            sprintf(args[1], "%d", i);
+            sprintf(args[2], "%d", j);
+            exec_ret = execvp("./out/taxi", args);
+            fprintf(stderr, "errore nella exec dei taxi: %d\n", exec_ret);
+            break;
+
+        default:
+            return child_pid;
+    }
 }
 
 void P (int semaphore, int index) {
@@ -216,15 +247,11 @@ void unload () {
     for(i = 0; i < SO_HEIGHT; i++) {
         for(j = 0; j < SO_WIDTH; j++) {
             if(!map[i][j].is_hole) semctl(map[i][j].cap_semid, 0, IPC_RMID);
-            if(map[i][j].source_pid > 0) {
-              semctl(map[i][j].req_access_sem, 0, IPC_RMID); 
-              close(map[i][j].req_pipe[R]); 
-              /* close(map[i][j].req_pipe[W]); */ /* da spostare in gen_sources */
-            }
+            if(map[i][j].source_pid > 0) semctl(map[i][j].req_access_sem, 0, IPC_RMID);  
         }
     }
 
-    semctl(sync_semaphore_id, 0, IPC_RMID);
+    semctl(sync_sources_sem, 0, IPC_RMID);
 
     /* 3. map */
     for(i = 0; i < SO_HEIGHT; i++) {
