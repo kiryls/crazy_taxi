@@ -1,3 +1,5 @@
+- aggiungo i taxi nel makefile
+
 - SIGSTOP ai processi taxi prima di chiamare gen_one_taxi per poterlo piazzare
     senza che nessuno rompa
 
