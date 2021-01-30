@@ -1,73 +1,181 @@
 #include "../headers/common.h"
 #include "../headers/taxi.h"
 
+/* 
+################################################################################################# 
+                                            MAIN
+descrizione
+################################################################################################# 
+*/
 int main(int argc, char const *argv[]) {
     
     int i, j;
-
-    init(argv);
+    sigset_t alarm_mask;
 
     set_signals();
+    
+    init(argv);
 
-    sync_simulation(sync_taxi_sem, 0, -1);
+    sync_simulation(pause_sem, 0, 0);
+    /* pause(); */
+ 
 
-    pause();
+    fprintf(logp, "%d (%d,%d) req access sem = %d\n", getpid(), p.r+1, p.c+1, semctl(map[p.r][p.c].req_access_sem, 0, GETVAL));
 
+    /* if(map[p.r][p.c].source_pid) */ get_req();
+    raise(SIGALRM);
+   
+
+    exit(EXIT_FAILURE);
 }
 
+/* 
+################################################################################################# 
+                                              INIT 
+descrizione
+################################################################################################# 
+*/
 void init (const char * argv[]) {
     int i;
 
     map_id = atoi(argv[0]);
     p.r = atoi(argv[1]);
     p.c = atoi(argv[2]);
+    TIMEOUT = atoi(argv[3]);
+    sync_taxi_sem = atoi(argv[4]);
+    pause_sem = atoi(argv[5]);
+
+
 
     rep.tot_length = 0;
     rep.tot_time = 0;
     rep.completed_rides = 0;
 
     map_row_ids = (int*) shmat(map_id, NULL, 0);
-    for(i = 0; i < SO_HEIGHT; i++) map[i] = shmat(map_row_ids[i], NULL, 0);
+
+    for(i = 0; i < SO_HEIGHT; i++) 
+        map[i] = shmat(map_row_ids[i], NULL, 0);
 
     logp = fopen("/home/kiryls/Documents/Coding/project/logs/taxi.log", "a");
+
+    write_log(logp);
 }
 
+/* 
+################################################################################################# 
+                                           UTILITY
+descrizione
+################################################################################################# 
+*/
+void get_req () {
+    alarm(TIMEOUT);
+
+    if(map[p.r][p.c].source_pid == 0) {
+        alarm(0);
+        sleep(1);
+        raise(SIGALRM);
+    }
+    
+    /* P(map[p.r][p.c].req_access_sem, 0); */
+        if(read(map[p.r][p.c].req_pipe[R], &dest, sizeof(Pos)) < 0) {
+            if(errno != EINTR) TEST_ERROR;
+        }
+
+    /* V(map[p.r][p.c].req_access_sem, 0); */
+
+    fprintf(logp, "%d (%d,%d) ==> (%d,%d)\n", getpid(), p.r+1, p.c+1 ,dest.r+1, dest.c+1);
+}
+
+void write_log(FILE * logp) {
+    fprintf(logp, "created %d @ (%d,%d): (PPID=%d | PGID=%d)\n",
+            getpid(), p.r+1, p.c+1,
+            getppid(), getpgid(getpid()));
+}
+
+void report() {
+
+}
+
+void pretend_doing (int sec) {
+    sigset_t m;
+    sigfillset(&m);
+    sigdelset(&m, SIGQUIT);
+    sigdelset(&m, SIGINT);
+    sigdelset(&m, SIGALRM);
+    /* sigdelset(&m, SIGSTOP); */
+
+    sigprocmask(SIG_BLOCK, &m, NULL);
+
+        sleep(sec);
+
+    sigprocmask(SIG_UNBLOCK, &m, NULL);
+}
+
+/* 
+################################################################################################# 
+                                           MOVEMENT
+descrizione
+################################################################################################# 
+*/
+
+
+
+
+/* 
+################################################################################################# 
+                                           SIGNALS
+descrizione
+################################################################################################# 
+*/
 void set_signals () {
     struct sigaction sa;
 
     sigemptyset(&mask);
     sigaddset(&mask, SIGALRM);
-    sigaddset(&mask, SIGQUIT);
-    sigaddset(&mask, SIGINT);
-
-    sa.sa_flags = SA_RESTART;
+    sigaddset(&mask, SIGSTOP);
+    sa.sa_flags = 0;
     sa.sa_mask = mask;
-    sa.sa_handler = signal_handler;
+    sa.sa_handler = termination;
+    sigaction(SIGALRM, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGINT, &sa, NULL);
 
+    sigemptyset(&mask);
+    sa.sa_mask = mask;
+    sa.sa_flags = SA_RESTART;
+    sa.sa_handler = resume;
+    sigaction(SIGCONT, &sa, NULL);
 }
 
-void signal_handler (int sig) {
-    sigprocmask(SIG_BLOCK, &mask, NULL);
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-    switch (sig) {
-    case SIGALRM:
-        break;
+void termination (int sig) {
+    int i;
 
-    case SIGQUIT:
-        break;
+    alarm(0);
 
-    case SIGINT:
-        break;
-    
-    default:
-        break;
+    V(map[p.r][p.c].cap_semid, 0);
+
+    for(i = 0; i < SO_HEIGHT; i++) 
+        if(shmdt(map[i])) TEST_ERROR;
+    if(shmdt(map_row_ids)) TEST_ERROR;
+
+    fprintf(logp, "unloaded %d\n\n", getpid());
+    fclose(logp);
+
+    if(operative) report();
+
+    sync_simulation(pause_sem, 0, 0);
+
+    switch(sig) {
+        case SIGALRM: exit(TAXI_ABRT);
+
+        case SIGINT:
+        case SIGTERM: exit(EXIT_SUCCESS);
+        
+        default: exit(EXIT_FAILURE);
     }
-
-    sigprocmask(SIG_UNBLOCK, &mask, NULL);
 }
-
 
  
-void resume (int sig) {
-    fprintf(logp, "[resuming taxi %d]\n", getpid());
-}
+void resume (int sig) {/* do nothing */}
