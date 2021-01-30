@@ -1,21 +1,10 @@
-- aggiungo i taxi nel makefile
+- anche le sources fanno REPORT
 
-- SIGSTOP ai processi taxi prima di chiamare gen_one_taxi per poterlo piazzare
-    senza che nessuno rompa
+- i taxi devono usare un semaforo per incrementare il traffico storico nelle celle
+
+- i taxi chiudono la pipe delle richieste (R) dopo che hanno accettato e sono partiti
 
 - aggiungo alla generazione dei taxi anche la shm del Ledger
-
-- quando aggiungo i taxi, agigungo SO_TAXI 
-        al sync_semaphore_id (in common.c:35)
-
-- devo chiudere il file taxi.log aperto nell'init del taxi
-
-- finire i signal e i signal handlers in taxi
-
-- processi taxi 
-    (il taxi abortito libera spazio a un nuovo taxi)
-
-- get_req() handler (oppure no) per i taxi
 
 - memento dei taxi (personal record & simulation record)
 
@@ -25,15 +14,19 @@
 
 - ??? altro ???
 
-- group pid per source & taxi 
-
-- il sync_simulation() non deve essere piu' toccato dopo il respawn dei taxi
-
-
 #############################################################################
+- tutti i taxi e il master devono fare detach dalla shared var START 
 - (((rivedo le malloc per array args (in source.c:131))))
 - deallocazione, detach delle strutture dati
 - TEST_ERROR deve stare dentro i rispettivi if!!!
 - verifico che tutti i processi abbiano fatto detach e close pipe
 - pensiamo ad un posto migliore per la generazione delle pipe 
         e nella chiusura dei file descriptor per il master
+
+template descrizione metodo:
+/* 
+################################################################################################# 
+                                            TITOLO
+                                         descrizione
+################################################################################################# 
+*/
