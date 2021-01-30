@@ -11,6 +11,9 @@ a.out
 *.o
 
 !Makefile
+!logs
+*.log
+
 
 ### Linux ###
 *~
