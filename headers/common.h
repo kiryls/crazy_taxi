@@ -47,7 +47,8 @@
     #define BUSY ""
 #endif
 
-#define TAXI_ABORTED 123
+#define TAXI_ABRT 3
+#define TIMER_EXIT 5
 #define R 0 /* READ form pipe */
 #define W 1 /* WRITE to pipe */
 #define NARGS 8
@@ -66,10 +67,10 @@ typedef enum {UP, DOWN, LEFT, RIGHT} Dir;
 typedef struct {
     int is_hole; /* 1 se edificio, 0 altrimenti */
     int source_pid; /* pid source oppure 0 */
-    int req_access_sem;
-    int req_pipe[2];
-    int cap_semid;
-    int cell_cap;
+    int req_access_sem; /* semaforo accesso alle richieste */
+    int req_pipe[2]; /* descrittori read/write della pipe richieste */
+    int cap_semid; /* semaforo della capienza */
+    int cell_cap; 
     int travel_time;
     int traffic;
 } Cell;
@@ -78,7 +79,6 @@ typedef struct {
     int r;
     int c;
 } Pos;
-
 
 typedef struct {    
     int SO_TAXI; 
@@ -94,7 +94,7 @@ typedef struct {
 } Config;
 
 typedef struct {
-    int STUD;
+    int something;
     /* 
         ### source_section_semid ###
         tot_reqs
@@ -114,42 +114,25 @@ typedef struct {
 } Ledger;
 
 /* global vars */
-Config *    config;
 
 int         map_id;
 int         *map_row_ids;
 Cell        *map[SO_HEIGHT];
-
-char        **args;
-
 int         sync_sources_sem;
 int         sync_taxi_sem;
-
 sigset_t    mask;
+int         END;
 
-pid_t       taxi_gpid;
-pid_t       source_gpid;
-
+int         pause_sem;
 
 /* implemented methods */
-int     load ();
-void    init_world();
-void    gen_holes();
-int     check_hole(int x, int y);
-void    gen_sources ();
 void    sync_simulation (int semid, int nsem, int value);
 void    P (int semaphore, int index);
 void    V (int semaphore, int index);
-void    print_map();
-void    unload ();
+
 
 /* to implement methods */
-void    gen_taxi ();
-int     gen_one_taxi (int i, int j);
+
 /* void set_signals (); */
-
-/* void simulate (); */
-
-
 #endif 
 
