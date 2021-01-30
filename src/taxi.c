@@ -16,15 +16,13 @@ int main(int argc, char const *argv[]) {
     
     init(argv);
 
-    sync_simulation(pause_sem, 0, 0);
-    /* pause(); */
+    ALLSET(sync_all, 0, 0);
  
-
     fprintf(logp, "%d (%d,%d) req access sem = %d\n", getpid(), p.r+1, p.c+1, semctl(map[p.r][p.c].req_access_sem, 0, GETVAL));
 
-    /* if(map[p.r][p.c].source_pid) */ get_req();
+    get_req();
+
     raise(SIGALRM);
-   
 
     exit(EXIT_FAILURE);
 }
@@ -42,8 +40,7 @@ void init (const char * argv[]) {
     p.r = atoi(argv[1]);
     p.c = atoi(argv[2]);
     TIMEOUT = atoi(argv[3]);
-    sync_taxi_sem = atoi(argv[4]);
-    pause_sem = atoi(argv[5]);
+    sync_all = atoi(argv[4]);
 
 
 
@@ -77,13 +74,11 @@ void get_req () {
     }
     
     /* P(map[p.r][p.c].req_access_sem, 0); */
-        if(read(map[p.r][p.c].req_pipe[R], &dest, sizeof(Pos)) < 0) {
-            if(errno != EINTR) TEST_ERROR;
-        }
+        if(read(map[p.r][p.c].req_pipe[R], &dest, sizeof(Pos)) < 0 && errno != EINTR) TEST_ERROR;
 
     /* V(map[p.r][p.c].req_access_sem, 0); */
 
-    fprintf(logp, "%d (%d,%d) ==> (%d,%d)\n", getpid(), p.r+1, p.c+1 ,dest.r+1, dest.c+1);
+    fprintf(logp, "%d (%d,%d) ==> (%d,%d)\n", getpid(), p.r+1, p.c+1 , dest.r+1, dest.c+1);
 }
 
 void write_log(FILE * logp) {
@@ -118,7 +113,41 @@ descrizione
 ################################################################################################# 
 */
 
+Dir get_direction(int r, int c){
+    int dR, dC;
+    Dir direction;
 
+    if ((r - p.r) == 0 && (c - p.c) == 0) return NO;
+
+    dR = (r - p.r) > 0;
+    dC = (c - p.c) > 0;
+
+    /* e' piu' urgente andare in verticale o in orizzontale ? */
+    if(ABS(c-p.c) > ABS(r-p.r)) direction = dC * RIGHT + !dC * LEFT;
+    else direction = dR * DOWN + !dR * UP;
+
+
+    switch (direction) {
+        case UP:
+            if(map[p.r - 1][p.c].is_hole) return dC * RIGHT + !dC * LEFT;
+            break;
+
+        case DOWN:
+            if(map[p.r + 1][p.c].is_hole) return dC * RIGHT + !dC * LEFT;
+            break;
+
+
+        case LEFT:
+            if(map[p.r][p.c - 1].is_hole) return dR * DOWN + !dR * UP;
+            break;
+        
+        case RIGHT:
+            if(map[p.r][p.c + 1].is_hole) return dR * DOWN + !dR * UP;
+            break;
+    }
+
+    return direction;
+}
 
 
 /* 
@@ -165,7 +194,7 @@ void termination (int sig) {
 
     if(operative) report();
 
-    sync_simulation(pause_sem, 0, 0);
+    ALLSET(sync_all, 0, 0);
 
     switch(sig) {
         case SIGALRM: exit(TAXI_ABRT);

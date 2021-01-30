@@ -80,20 +80,8 @@ int load(){
     for(i = 0; i < NARGS - 1; i++) args[i] = malloc(sizeof(int));
     args[NARGS - 1] = NULL;
 
-    /* semaforo sync creazione sorgenti */
-    sync_sources_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
-    /* TEST_ERROR; */
-    semctl(sync_sources_sem, 0, SETVAL, config->SO_SOURCES); 
-
-    /* semaforo sync creazione taxi */
-    sync_taxi_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
-    /* TEST_ERROR; */
-    semctl(sync_taxi_sem, 0, SETVAL, config->SO_TAXI); 
-
-    END = 0;
-
-    pause_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
-    semctl(pause_sem, 0, SETVAL, 1);
+    sync_all = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
+    semctl(sync_all, 0, SETVAL, 1);
 
     return 0;
 }
@@ -114,8 +102,6 @@ void unload () {
             if(map[i][j].source_pid > 0) semctl(map[i][j].req_access_sem, 0, IPC_RMID);  
         }
     }
-
-    semctl(sync_sources_sem, 0, IPC_RMID);
 
     /* 3. map */
     for(i = 0; i < SO_HEIGHT; i++) {
@@ -221,7 +207,7 @@ descrizione
 void gen_timer () {
     int exec_ret;
     sprintf(args[0], "%d", config->SO_DURATION);
-    sprintf(args[1], "%d", pause_sem);
+    sprintf(args[1], "%d", sync_all);
 
     switch(timer_id = fork()) {
         case -1:
@@ -266,8 +252,7 @@ void gen_sources () {
                     sprintf(args[0],"%d", map_id);
                     sprintf(args[1],"%d", i);
                     sprintf(args[2],"%d", j);
-                    sprintf(args[3],"%d", sync_sources_sem);
-                    sprintf(args[4],"%d", pause_sem);
+                    sprintf(args[3],"%d", sync_all);
 
                     exec_ret = execvp("./out/source", args);
                     fprintf(stderr, "||| errore nella exec delle sources: %d |||\n", exec_ret);
@@ -325,9 +310,7 @@ int gen_one_taxi (int i, int j) {
             sprintf(args[1], "%d", i);
             sprintf(args[2], "%d", j);
             sprintf(args[3], "%d", config->SO_TIMEOUT);
-            sprintf(args[4], "%d", sync_taxi_sem);
-            sprintf(args[5], "%d", pause_sem);
-            sprintf(args[6], "%d", END);
+            sprintf(args[4], "%d", sync_all);
 
             exec_ret = execvp("./out/taxi", args);
             fprintf(stderr, "||| errore nella exec dei taxi: %d |||\n", exec_ret);
@@ -362,11 +345,11 @@ void simulate () {
     int child;
     int status;
 
-    sync_simulation(pause_sem, 0, -1);
+    ALLSET(sync_all, 0, -1);
 
-    while((child = wait(&status)) > 0 && semctl(pause_sem, 0, GETVAL) == 0) {
+    while((child = wait(&status)) > 0 && semctl(sync_all, 0, GETVAL) == 0) {
         if(WEXITSTATUS(status) == TAXI_ABRT) respawn();
-        else fprintf(stderr, "||| %s %d unexpectedly exited with code %d|||\n", child == timer_id ? "timer" : "taxi", WEXITSTATUS(status));
+        else fprintf(stderr, "||| %s %d unexpectedly exited with code %d|||\n", child == timer_id ? "timer" : "taxi", child, WEXITSTATUS(status));
     }
 
     if(killpg(child_gpid, SIGTERM) < 0) TEST_ERROR;
@@ -376,7 +359,7 @@ void simulate () {
         printf("((((( EVENT HORIZON )))))\n");
     }
 
-    sync_simulation(pause_sem, 0, -1);
+    ALLSET(sync_all, 0, -1);
 
     while((child = wait(&status)) > 0) {
         switch (WEXITSTATUS(status)) {
@@ -427,18 +410,15 @@ void set_signals() {
 
 void print_map_handler(int sig) {
     killpg(child_gpid, SIGSTOP);
-    /* V(pause_sem, 0); */
 
         print_map();
         
-    /* P(pause_sem, 0); */
     killpg(child_gpid, SIGCONT);
 }
 
 void wrap_up(int sig) {
     printf("--- TIME'S UP ---\n");
-    V(pause_sem, 0);
-    
+    V(sync_all, 0);
 }
 
 /* 

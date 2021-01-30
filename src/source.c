@@ -17,7 +17,7 @@ int main(int argc, char const *argv[]) {
 
     set_signals();
     
-    sync_simulation(pause_sem, 0, 0);
+    ALLSET(sync_all, 0, 0);
 
     while(1) {
         raise(SIGALRM);
@@ -40,8 +40,7 @@ void init (const char * argv[]) {
     map_id = atoi(argv[0]); 
     p.r = atoi(argv[1]);
     p.c = atoi(argv[2]);
-    sync_sources_sem = atoi(argv[3]);
-    pause_sem = atoi(argv[4]);
+    sync_all = atoi(argv[3]);
 
     tot_reqs = 0;
 
@@ -141,7 +140,7 @@ void termination (int sig) {
 
     /* MANCA REPORT */
 
-    sync_simulation(pause_sem, 0, 0);
+    ALLSET(sync_all, 0, 0);
 
     exit(EXIT_SUCCESS);
 

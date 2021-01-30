@@ -52,9 +52,7 @@
 #define R 0 /* READ form pipe */
 #define W 1 /* WRITE to pipe */
 #define NARGS 8
-#define ABS(X) (((X)>0)*(X) + ((X)<=0)*(~(X)+1))
 
-typedef enum {UP, DOWN, LEFT, RIGHT} Dir;
 
 #define TEST_ERROR    if (errno) {dprintf(STDERR_FILENO, \
 					  "%s:%d: PID=%5d: Error %d (%s)\n", \
@@ -116,17 +114,14 @@ typedef struct {
 /* global vars */
 
 int         map_id;
-int         *map_row_ids;
-Cell        *map[SO_HEIGHT];
-int         sync_sources_sem;
-int         sync_taxi_sem;
+int*        map_row_ids;
+Cell*       map[SO_HEIGHT];
 sigset_t    mask;
-int         END;
 
-int         pause_sem;
+int         sync_all;
 
 /* implemented methods */
-void    sync_simulation (int semid, int nsem, int value);
+void    ALLSET (int semid, int nsem, int value);
 void    P (int semaphore, int index);
 void    V (int semaphore, int index);
 

@@ -5,9 +5,9 @@ int main(int argc, char const *argv[]) {
     int DURATION;
 
     DURATION = atoi(argv[0]);
-    pause_sem = atoi(argv[1]);
+    sync_all = atoi(argv[1]);
 
-    sync_simulation(pause_sem, 0, 0);
+    ALLSET(sync_all, 0, 0);
 
     for(i = 0; i < DURATION; i++) {
         kill(getppid(), SIGALRM);
