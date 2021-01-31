@@ -20,5 +20,6 @@ void    set_signals();
 void    print_map_handler(int sig);
 void    wrap_up(int sig);
 void    print_map();
+void    print_traffic();
 
 #endif
