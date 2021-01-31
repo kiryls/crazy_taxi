@@ -1,6 +1,16 @@
 - anche le sources fanno REPORT
 
-- i taxi devono usare un semaforo per incrementare il traffico storico nelle celle
+- distinguo i taxi che hanno mai accettato viaggi da quelli che non lo erano
+    se on_duty == 1 allora il taxi ha accettato richiesta ma e' stato abortito
+    prima. quindi viaggio fallito.
+
+- tolgo i semafori di accesso alle pipes (perche' molto prob non servono)
+    (li trasformo in semafori per incrementare il traffico delle celle)
+
+- taxi/source/timer hanno exit status differenti
+
+- i taxi devono usare un semaforo per incrementare il traffico storico nelle celle 
+    (vedi piu' in alto)
 
 - i taxi chiudono la pipe delle richieste (R) dopo che hanno accettato e sono partiti
 
@@ -9,8 +19,6 @@
 - memento dei taxi (personal record & simulation record)
 
 - funzione update_ledger dei taxi
-
-- movimento dei taxi
 
 - ??? altro ???
 
