@@ -17,7 +17,7 @@ int main(int argc, char const *argv[]) {
 
     set_signals();
     
-    ALLSET(sync_all, 0, 0);
+    Z(sync_all);
 
     while(1) {
         raise(SIGALRM);
@@ -50,7 +50,7 @@ void init (const char * argv[]) {
         map[i] = shmat(map_row_ids[i], NULL, 0);
 
     /* map[p.r][p.c].req_access_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600); */
-    semctl(map[p.r][p.c].req_access_sem, 0, SETVAL, 1);
+    /* semctl(map[p.r][p.c].update_traffic_sem, 0, SETVAL, 1); */
 
     close(map[p.r][p.c].req_pipe[R]);
 
@@ -118,7 +118,7 @@ void gen_req (int sig) {
     }while(map[dest.r][dest.c].is_hole || ( dest.r == p.r && dest.c == p.c));
 
     /* P(map[p.r][p.c].req_access_sem, 0); */
-       if( write(map[p.r][p.c].req_pipe[W], &dest, sizeof(Pos)) < 0 && errno != EINTR) TEST_ERROR;
+       if(write(map[p.r][p.c].req_pipe[W], &dest, sizeof(Pos)) < 0 && errno != EINTR) TEST_ERROR;
     /* V(map[p.r][p.c].req_access_sem, 0); */
 
     tot_reqs++;
@@ -140,10 +140,9 @@ void termination (int sig) {
 
     /* MANCA REPORT */
 
-    ALLSET(sync_all, 0, 0);
+    Z(sync_all);
 
     exit(EXIT_SUCCESS);
-
 }
 
 void resume (int sig) {/* do nothing */}
