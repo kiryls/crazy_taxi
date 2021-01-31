@@ -6,24 +6,24 @@
 descrizione
 ################################################################################################# 
 */
-void P (int semaphore, int index) {
-    struct sembuf operation;
+void P (int semaphore) {
+    struct sembuf op;
 
-    operation.sem_flg = 0;
-    operation.sem_num = index;
-    operation.sem_op = -1;
+    op.sem_flg = 0;
+    op.sem_num = 0;
+    op.sem_op = -1;
 
-    semop(semaphore, &operation, 1);
+    semop(semaphore, &op, 1);
 }
 
-void V (int semaphore, int index) {
-    struct sembuf operation;
+void V (int semaphore) {
+    struct sembuf op;
 
-    operation.sem_flg = 0;
-    operation.sem_num = index;
-    operation.sem_op = 1;
+    op.sem_flg = 0;
+    op.sem_num = 0;
+    op.sem_op = 1;
 
-    semop(semaphore, &operation, 1);
+    semop(semaphore, &op, 1);
 }
 
 /* 
@@ -32,13 +32,14 @@ void V (int semaphore, int index) {
 descrizione
 ################################################################################################# 
 */
-void ALLSET (int semid, int nsem, int value){
-    struct sembuf sop;
+void Z (int semaphore){
+    struct sembuf op;
 
-    sop.sem_num = nsem;
-    sop.sem_flg = 0;
-    sop.sem_op = value;
+    op.sem_num = 0;
+    op.sem_flg = 0;
+    op.sem_op = 0;
    
-    while(semop(semid,&sop,1) == -1 && errno != EINTR) TEST_ERROR;
+    /* while(semop(semaphore, &sop, 1) == -1 && errno != EINTR) TEST_ERROR; */
+    semop(semaphore, &op, 1);
 } 
 
