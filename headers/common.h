@@ -47,7 +47,8 @@
     #define BUSY ""
 #endif
 
-#define TAXI_ABRT 3
+#define TAXI_ABORT 3
+#define SOURCE_EXIT 4
 #define TIMER_EXIT 5
 #define R 0 /* READ form pipe */
 #define W 1 /* WRITE to pipe */
@@ -65,11 +66,11 @@
 typedef struct {
     int is_hole; /* 1 se edificio, 0 altrimenti */
     int source_pid; /* pid source oppure 0 */
-    int req_access_sem; /* semaforo accesso alle richieste */
     int req_pipe[2]; /* descrittori read/write della pipe richieste */
     int cap_semid; /* semaforo della capienza */
     int cell_cap; 
     int travel_time;
+    int update_traffic_sem; /* semaforo per aggiornare il traffico in una cella */
     int traffic;
 } Cell;
 
@@ -117,17 +118,11 @@ int         map_id;
 int*        map_row_ids;
 Cell*       map[SO_HEIGHT];
 sigset_t    mask;
-
 int         sync_all;
 
-/* implemented methods */
-void    ALLSET (int semid, int nsem, int value);
-void    P (int semaphore, int index);
-void    V (int semaphore, int index);
+void    P (int semaphore);
+void    V (int semaphore);
+void    Z (int semaphore);
 
-
-/* to implement methods */
-
-/* void set_signals (); */
 #endif 
 
