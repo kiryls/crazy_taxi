@@ -7,7 +7,7 @@ int main(int argc, char const *argv[]) {
     DURATION = atoi(argv[0]);
     sync_all = atoi(argv[1]);
 
-    ALLSET(sync_all, 0, 0);
+    Z(sync_all);
 
     for(i = 0; i < DURATION; i++) {
         kill(getppid(), SIGALRM);
