@@ -38,6 +38,8 @@ int main(int argc, char *argv[]) {
     simulate();
         printf("\t\t\t ~~~  E  N  D  ~~~ \n");
 
+        printf("TRAFFIC MAP:\n");
+    print_traffic();
     
     unload();
         printf("*** unloaded all structures ***\n");
@@ -99,7 +101,7 @@ void unload () {
     for(i = 0; i < SO_HEIGHT; i++) {
         for(j = 0; j < SO_WIDTH; j++) {
             if(!map[i][j].is_hole) semctl(map[i][j].cap_semid, 0, IPC_RMID);
-            if(map[i][j].source_pid > 0) semctl(map[i][j].req_access_sem, 0, IPC_RMID);  
+            if(map[i][j].source_pid > 0) semctl(map[i][j].update_traffic_sem, 0, IPC_RMID);  
         }
     }
 
@@ -112,7 +114,8 @@ void unload () {
     if (shmdt(map_row_ids)) TEST_ERROR;
     if(shmctl(map_id, IPC_RMID, NULL)) TEST_ERROR;
 
-    /* 4. sim status */
+    /* 4. sync all */
+    semctl(sync_all, 0, IPC_RMID);
 
 
     /* 5. close pipes (forse non serve) */
@@ -140,11 +143,11 @@ void init_world () {
         for(j = 0; j < SO_WIDTH; j++) {
             map[i][j].is_hole = 0;
             map[i][j].source_pid = 0;
-            map[i][j].req_access_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600); 
-            semctl(map[i][j].req_access_sem, 0, SETVAL, 0);
             map[i][j].cap_semid = 0; 
             map[i][j].cell_cap = config->SO_CAP_MIN + rand() % (config->SO_CAP_MAX - config->SO_CAP_MIN +1);
             map[i][j].travel_time = config->SO_TIMENSEC_MIN + rand() % (config->SO_TIMENSEC_MAX - config->SO_TIMENSEC_MIN + 1);
+            map[i][j].update_traffic_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600); 
+            semctl(map[i][j].update_traffic_sem, 0, SETVAL, 1);
             map[i][j].traffic = 0;
         }
     }
@@ -295,7 +298,7 @@ void gen_taxi () {
 int gen_one_taxi (int i, int j) {
     int child_pid, exec_ret;
 
-    P(map[i][j].cap_semid, 0);
+    P(map[i][j].cap_semid);
 
     switch(child_pid = fork()) {
         
@@ -345,10 +348,11 @@ void simulate () {
     int child;
     int status;
 
-    ALLSET(sync_all, 0, -1);
+    /* Z(sync_all, -1); */
+    P(sync_all);
 
     while((child = wait(&status)) > 0 && semctl(sync_all, 0, GETVAL) == 0) {
-        if(WEXITSTATUS(status) == TAXI_ABRT) respawn();
+        if(WEXITSTATUS(status) == TAXI_ABORT) respawn();
         else fprintf(stderr, "||| %s %d unexpectedly exited with code %d|||\n", child == timer_id ? "timer" : "taxi", child, WEXITSTATUS(status));
     }
 
@@ -356,14 +360,16 @@ void simulate () {
 
     if(waitpid(timer_id, &status, 0) > 0) {
         printf("*** timer %d done ***\n", timer_id);
-        printf("((((( EVENT HORIZON )))))\n");
+        printf("(( (  (   (    AFTERMATH    )   )  ) ))\n");
     }
 
-    ALLSET(sync_all, 0, -1);
+    P(sync_all);
+    /* Z(sync_all, -1); */
 
     while((child = wait(&status)) > 0) {
         switch (WEXITSTATUS(status)) {
             case EXIT_SUCCESS:
+            case SOURCE_EXIT: 
                 printf("*** child %d terminated successfully ***\n", child);
                 break;
             default:
@@ -418,7 +424,7 @@ void print_map_handler(int sig) {
 
 void wrap_up(int sig) {
     printf("--- TIME'S UP ---\n");
-    V(sync_all, 0);
+    V(sync_all);
 }
 
 /* 
@@ -447,6 +453,39 @@ void print_map () {
                     if (map[i][j].source_pid > 0) printf(SOURCE);
                     if(!semctl(map[i][j].cap_semid, 0, GETVAL)) printf(BUSY);
                     traffic = map[i][j].cell_cap - semctl(map[i][j].cap_semid, 0, GETVAL); 
+                    sprintf(s,"%2d ", traffic);
+                    printf("%s" ENDSTYLE, traffic == 0 ? "   " : s);
+            }
+
+            printf("|");
+        }
+    
+        printf("\n+");
+        for (j = 0; j < SO_WIDTH; j++){ printf("---+"); }
+    }
+    printf("\n\n");
+}
+
+void print_traffic () {
+    int i, j;
+    char s[4];
+    int traffic;
+
+    printf("\n+");
+
+    for (j = 0; j < SO_WIDTH; j++) printf("---+");
+
+    for(i = 0; i < SO_HEIGHT; i++){
+        printf("\n|");
+        for(j = 0; j < SO_WIDTH; j++){
+
+            switch(map[i][j].is_hole) {
+                case 1: printf(HOLE "   " ENDSTYLE); break;
+
+                default:
+                    if (map[i][j].source_pid > 0) printf(SOURCE);
+                    if(!semctl(map[i][j].cap_semid, 0, GETVAL)) printf(BUSY);
+                    traffic = map[i][j].traffic; 
                     sprintf(s,"%2d ", traffic);
                     printf("%s" ENDSTYLE, traffic == 0 ? "   " : s);
             }
