@@ -21,18 +21,18 @@
 #include <sys/shm.h>
 #include <sys/stat.h>
 
-#define DENSE 0
+#define DENSE 1
 #define STYLE 1
 
 #if DENSE
-    #define SO_WIDTH 20
     #define SO_HEIGHT 10
+    #define SO_WIDTH 20
     #define CONFIG "./config/config_dense.txt"
 
 #else 
     #define SO_HEIGHT 20 
-    #define SO_WIDTH  40
-    #define CONFIG "./config/config_custom.txt"
+    #define SO_WIDTH  60
+    #define CONFIG "./config/config_large.txt"
 #endif
 
 #if STYLE
@@ -114,6 +114,11 @@ typedef struct {
     Report most_rides;
 } Ledger;
 
+typedef struct {
+    int val;
+    Pos p;
+} Top;
+
 /* global vars */
 
 int         map_id;
@@ -123,6 +128,7 @@ sigset_t    mask;
 int         sync_all;
 int         ledger_id;
 Ledger*     ledger;
+Top*        tops;
 
 void    P (int semaphore);
 void    V (int semaphore);
