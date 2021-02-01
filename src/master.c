@@ -94,6 +94,8 @@ int load(){
     semctl(ledger->source_section, 0, SETVAL, 1);
     semctl(ledger->taxi_section, 0, SETVAL, 1);
 
+    tops = calloc(config->SO_TOP_CELLS, sizeof(Top));
+
     return 0;
 }
 
@@ -133,6 +135,8 @@ void unload () {
     if(shmdt(ledger)) TEST_ERROR;
     if(shmctl(ledger_id, IPC_RMID, NULL)) TEST_ERROR;
 
+    /* 6. tops */
+    free(tops);
 }
 
 /* 
@@ -143,6 +147,8 @@ descrizione
 */
 void init_world () {
     int i, j;
+
+    for(i = 0; i < config->SO_TOP_CELLS; i++) tops[i].val = -1;
 
     map_id = shmget(IPC_PRIVATE, sizeof(int) * SO_HEIGHT, /* S_IRUSR | S_IWUSR */ IPC_CREAT | 0600);
     map_row_ids = shmat(map_id, NULL, 0);
@@ -398,6 +404,44 @@ void simulate () {
 
 /* 
 ################################################################################################# 
+                                            UTILITY
+descrizione
+################################################################################################# 
+*/
+
+void select_tops() {
+    int i, j, count;
+
+    count = 0;
+    while(count < config->SO_TOP_CELLS) {
+
+        for(i = 0; i < SO_HEIGHT; i++) {
+            for(j = 0; j < SO_WIDTH; j++) {
+                if(map[i][j].traffic > tops[count].val && !is_top(i, j)) {
+                    tops[count].p.r = i;
+                    tops[count].p.c = j;
+                    tops[count].val = map[i][j].traffic;
+                }
+            }
+        } 
+
+        count++; 
+    }
+    
+}
+
+int is_top(int r, int c) {
+    int i;
+
+    for(i = 0; i < config->SO_TOP_CELLS && tops[i].val != -1; i++) {
+        if(tops[i].p.r == r && tops[i].p.c == c) return 1;
+    }
+
+    return 0;
+}
+
+/* 
+################################################################################################# 
                                             SIGNALS
 descrizione
 ################################################################################################# 
@@ -481,10 +525,14 @@ void print_map () {
     printf("\n\n");
 }
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 void aftermath () {
     int i, j;
     char s[4];
     int traffic;
+
+    select_tops();
 
     printf("\n+");
 
@@ -499,6 +547,7 @@ void aftermath () {
 
                 default:
                     if (map[i][j].source_pid > 0) printf(SOURCE);
+                    if(is_top(i, j)) printf(BUSY);
                     traffic = map[i][j].traffic; 
                     sprintf(s,"%2d ", traffic);
                     printf("%s" ENDSTYLE, traffic == 0 ? "   " : s);
@@ -521,12 +570,5 @@ void aftermath () {
     printf("\tLongest distance taxi:               #%d which crossed %d cells\n", ledger->best_distance.taxi_id, ledger->best_distance.tot_length);
     printf("\tTaxi that served the longest task:   #%d which took a task for %.3f seconds\n", ledger->best_longevity.taxi_id, ledger->best_longevity.time);
     printf("\tMost operative taxi:                 #%d which served %d rides\n", ledger->most_rides.taxi_id, ledger->most_rides.completed_rides);
-
-    /* for(i = 0; i < SO_HEIGHT; i++) {
-        for(j = 0; j < SO_WIDTH; j++) {
-            printf("[%d]", map[i][j].cap_semid);
-        }
-        printf("\n");
-    } */
 }
 
