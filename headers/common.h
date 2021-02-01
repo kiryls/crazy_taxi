@@ -25,13 +25,13 @@
 #define STYLE 1
 
 #if DENSE
-    #define SO_WIDTH
-    #define SO_HEIGHT
+    #define SO_WIDTH 20
+    #define SO_HEIGHT 10
     #define CONFIG "./config/config_dense.txt"
 
 #else 
-    #define SO_HEIGHT 4 
-    #define SO_WIDTH  6
+    #define SO_HEIGHT 20 
+    #define SO_WIDTH  40
     #define CONFIG "./config/config_custom.txt"
 #endif
 
@@ -93,23 +93,25 @@ typedef struct {
 } Config;
 
 typedef struct {
-    int something;
-    /* 
-        ### source_section_semid ###
-        tot_reqs
+    pid_t           taxi_id;
+    int             tot_length;
+    /* struct timespec tot_time; */
+    float           time;
+    int             completed_rides; 
+} Report;
 
+typedef struct {
+    int source_section;
+    int tot_requests;
 
-        ### taxi_section_semid ###
-        successful rides
-        aborted rides
-        (unfilled rides)
+    int taxi_section;
+    int completed_rides;
+    int failed_rides;
+    int unfilled_rides;
 
-        int ** top cells
-
-        cell-num-record taxi pid
-        travel-time-record taxi pid
-        successful-rides taxi pid
-     */
+    Report best_distance;
+    Report best_longevity;
+    Report most_rides;
 } Ledger;
 
 /* global vars */
@@ -119,6 +121,8 @@ int*        map_row_ids;
 Cell*       map[SO_HEIGHT];
 sigset_t    mask;
 int         sync_all;
+int         ledger_id;
+Ledger*     ledger;
 
 void    P (int semaphore);
 void    V (int semaphore);
