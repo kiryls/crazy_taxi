@@ -11,19 +11,13 @@ typedef enum {
     RIGHT
 } Dir;
 
-typedef struct {
-    /* taxi report on every ride */
-    int tot_length;
-    int tot_time;
-    int completed_rides; 
-} Report;
-
-Pos         p;
-Pos         dest;
-int         TIMEOUT;
-int         on_duty;
-FILE*       logp;
-Report      rep;
+Pos          p;
+Pos          dest;
+int          TIMEOUT;
+int          on_duty;
+FILE*        logp;
+Report       rep;
+unsigned int timeTMP;
 
 void init (const char * argv[]);
 void get_req();
