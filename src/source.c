@@ -41,6 +41,7 @@ void init (const char * argv[]) {
     p.r = atoi(argv[1]);
     p.c = atoi(argv[2]);
     sync_all = atoi(argv[3]);
+    ledger_id = atoi(argv[4]);
 
     tot_reqs = 0;
 
@@ -48,6 +49,8 @@ void init (const char * argv[]) {
 
     for(i = 0; i < SO_HEIGHT; i++) 
         map[i] = shmat(map_row_ids[i], NULL, 0);
+
+    ledger = shmat(ledger_id, NULL, 0);
 
     /* map[p.r][p.c].req_access_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600); */
     /* semctl(map[p.r][p.c].update_traffic_sem, 0, SETVAL, 1); */
@@ -63,6 +66,12 @@ void init (const char * argv[]) {
 descrizione
 ################################################################################################# 
 */
+void report () {
+    P(ledger->source_section);
+        ledger->tot_requests += tot_reqs;
+    V(ledger->source_section);
+}
+
 void write_log(FILE * logp, Pos dest) {
     fprintf(logp, "%d @ (%d,%d): (PPID=%d | PGID=%d) request #%d -> (%d,%d)\n",
             getpid(), p.r+1, p.c+1,
@@ -135,10 +144,11 @@ void termination (int sig) {
         if(shmdt(map[i])) TEST_ERROR;
     if(shmdt(map_row_ids)) TEST_ERROR;
 
+    report();
+    if(shmdt(ledger)) TEST_ERROR;
+
     fprintf(logp, "source (%d) terminated successfully\n\n", getpid());
     fclose(logp);
-
-    /* MANCA REPORT */
 
     Z(sync_all);
 
