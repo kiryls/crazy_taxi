@@ -17,29 +17,29 @@ int main(int argc, char *argv[]) {
 
 
     if (load()) exit(EXIT_FAILURE);
-        printf("+++ loading completed +++\n");
+        printf("+ loading done\n");
 
     init_world();
-        printf("+++ world created +++\n");
+        printf("+ world created\n");
 
     gen_sources();
-        printf("+++ all sources generated +++\n");
+        printf("+ sources generated\n");
 
     gen_taxi();
-        printf("+++ all taxi generated +++\n");
+        printf("+ taxi generated +++\n");
 
     gen_timer();
         printf("+++ timer %d set +++\n", timer_id);
 
     set_signals();
-        printf("+++ all signals set +++\n");
+        printf("+ signals set +++\n\n");
 
         printf("\t\t\t~~~ S T A R T ~~~ \n");
     simulate();
         printf("\t\t\t ~~~  E  N  D  ~~~ \n");
 
-        printf("TRAFFIC MAP:\n");
-    print_traffic();
+        
+    aftermath();
     
     unload();
         printf("*** unloaded all structures ***\n");
@@ -85,6 +85,15 @@ int load(){
     sync_all = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
     semctl(sync_all, 0, SETVAL, 1);
 
+    ledger_id = shmget(IPC_PRIVATE, sizeof(Ledger), IPC_CREAT | 0600);
+    ledger = shmat(ledger_id, NULL, 0);
+
+    ledger->source_section = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
+    ledger->taxi_section = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
+
+    semctl(ledger->source_section, 0, SETVAL, 1);
+    semctl(ledger->taxi_section, 0, SETVAL, 1);
+
     return 0;
 }
 
@@ -97,7 +106,7 @@ void unload () {
     for(i = 0; i < NARGS; i++) free(args[i]);
     free(args);
 
-    /* 2. semafori & pipes */
+    /* 2. semafori map */
     for(i = 0; i < SO_HEIGHT; i++) {
         for(j = 0; j < SO_WIDTH; j++) {
             if(!map[i][j].is_hole) semctl(map[i][j].cap_semid, 0, IPC_RMID);
@@ -111,14 +120,19 @@ void unload () {
         if(shmctl(map_row_ids[i], IPC_RMID, NULL)) TEST_ERROR;
     }
     
-    if (shmdt(map_row_ids)) TEST_ERROR;
+    if(shmdt(map_row_ids)) TEST_ERROR;
     if(shmctl(map_id, IPC_RMID, NULL)) TEST_ERROR;
 
     /* 4. sync all */
     semctl(sync_all, 0, IPC_RMID);
 
+    /* 5. ledger */
+    semctl(ledger->source_section, 0, IPC_RMID);
+    semctl(ledger->taxi_section, 0, IPC_RMID);
 
-    /* 5. close pipes (forse non serve) */
+    if(shmdt(ledger)) TEST_ERROR;
+    if(shmctl(ledger_id, IPC_RMID, NULL)) TEST_ERROR;
+
 }
 
 /* 
@@ -256,6 +270,7 @@ void gen_sources () {
                     sprintf(args[1],"%d", i);
                     sprintf(args[2],"%d", j);
                     sprintf(args[3],"%d", sync_all);
+                    sprintf(args[4], "%d", ledger_id);
 
                     exec_ret = execvp("./out/source", args);
                     fprintf(stderr, "||| errore nella exec delle sources: %d |||\n", exec_ret);
@@ -314,6 +329,7 @@ int gen_one_taxi (int i, int j) {
             sprintf(args[2], "%d", j);
             sprintf(args[3], "%d", config->SO_TIMEOUT);
             sprintf(args[4], "%d", sync_all);
+            sprintf(args[5], "%d", ledger_id);
 
             exec_ret = execvp("./out/taxi", args);
             fprintf(stderr, "||| errore nella exec dei taxi: %d |||\n", exec_ret);
@@ -360,7 +376,6 @@ void simulate () {
 
     if(waitpid(timer_id, &status, 0) > 0) {
         printf("*** timer %d done ***\n", timer_id);
-        printf("(( (  (   (    AFTERMATH    )   )  ) ))\n");
     }
 
     P(sync_all);
@@ -370,10 +385,10 @@ void simulate () {
         switch (WEXITSTATUS(status)) {
             case EXIT_SUCCESS:
             case SOURCE_EXIT: 
-                printf("*** child %d terminated successfully ***\n", child);
+                /* printf("*** child %d terminated successfully ***\n", child); */
                 break;
             default:
-                fprintf(stderr, "||| child %d unexpectedly exited |||\n", child);
+                fprintf(stderr, "||| child %d unexpectedly exited = %d|||\n", child, WEXITSTATUS(status));
         }
     }
 
@@ -415,11 +430,11 @@ void set_signals() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void print_map_handler(int sig) {
-    killpg(child_gpid, SIGSTOP);
+    /* killpg(child_gpid, SIGSTOP); */
 
         print_map();
         
-    killpg(child_gpid, SIGCONT);
+    /* killpg(child_gpid, SIGCONT); */
 }
 
 void wrap_up(int sig) {
@@ -466,7 +481,7 @@ void print_map () {
     printf("\n\n");
 }
 
-void print_traffic () {
+void aftermath () {
     int i, j;
     char s[4];
     int traffic;
@@ -484,7 +499,6 @@ void print_traffic () {
 
                 default:
                     if (map[i][j].source_pid > 0) printf(SOURCE);
-                    if(!semctl(map[i][j].cap_semid, 0, GETVAL)) printf(BUSY);
                     traffic = map[i][j].traffic; 
                     sprintf(s,"%2d ", traffic);
                     printf("%s" ENDSTYLE, traffic == 0 ? "   " : s);
@@ -497,4 +511,22 @@ void print_traffic () {
         for (j = 0; j < SO_WIDTH; j++){ printf("---+"); }
     }
     printf("\n\n");
+    printf("(( (  (   (    AFTERMATH    )   )  ) ))\n\n");
+    printf("General stats:\n");
+    printf("\tTot requests served:   %d\n", ledger->completed_rides);
+    printf("\tTot failed requests:   %d\n", ledger->failed_rides);
+    printf("\tTot unfilled requests: %d\n", ledger->tot_requests - (ledger->completed_rides + ledger->failed_rides));
+    printf("\t\t~ ~ ~ ~\n");
+
+    printf("\tLongest distance taxi:               #%d which crossed %d cells\n", ledger->best_distance.taxi_id, ledger->best_distance.tot_length);
+    printf("\tTaxi that served the longest task:   #%d which took a task for %.3f seconds\n", ledger->best_longevity.taxi_id, ledger->best_longevity.time);
+    printf("\tMost operative taxi:                 #%d which served %d rides\n", ledger->most_rides.taxi_id, ledger->most_rides.completed_rides);
+
+    /* for(i = 0; i < SO_HEIGHT; i++) {
+        for(j = 0; j < SO_WIDTH; j++) {
+            printf("[%d]", map[i][j].cap_semid);
+        }
+        printf("\n");
+    } */
 }
+
