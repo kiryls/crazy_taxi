@@ -8,22 +8,22 @@ descrizione
 */
 void P (int semaphore) {
     struct sembuf op;
-
     op.sem_flg = 0;
     op.sem_num = 0;
     op.sem_op = -1;
 
     semop(semaphore, &op, 1);
+    /* printf("P(%d): %d\n", semaphore, getpid()); */
 }
 
 void V (int semaphore) {
     struct sembuf op;
-
     op.sem_flg = 0;
     op.sem_num = 0;
     op.sem_op = 1;
 
     semop(semaphore, &op, 1);
+    /* printf("V(%d): %d\n", semaphore, getpid()); */
 }
 
 /* 
