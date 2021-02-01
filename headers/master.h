@@ -21,5 +21,7 @@ void    print_map_handler(int sig);
 void    wrap_up(int sig);
 void    print_map();
 void    aftermath();
+void    select_tops();
+int     is_top(int r, int c);
 
 #endif
