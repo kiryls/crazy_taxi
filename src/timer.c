@@ -1,5 +1,13 @@
 #include "../headers/common.h"
 
+/* 
+################################################################################################# 
+                                              TIMER
+
+    Processo che l'unico scopo di scandire il tempo e notificare il master quando bisogna 
+    intraprendere certe azioni.
+################################################################################################# 
+*/
 int main(int argc, char const *argv[]) {
     int i;
     int DURATION;
