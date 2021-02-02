@@ -8,7 +8,6 @@ descrizione
 ################################################################################################# 
 */
 int main(int argc, char const *argv[]) {
-
     int i;
 
     srand(getpid());
@@ -22,9 +21,9 @@ int main(int argc, char const *argv[]) {
     while(1) {
         raise(SIGALRM);
 
-        sigprocmask(SIG_BLOCK, &sleep_mask, NULL);
-            sleep(2);
-        sigprocmask(SIG_UNBLOCK, &sleep_mask, NULL);
+        /* sigprocmask(SIG_BLOCK, &sleep_mask, NULL); */
+        sleep(2);
+        /* sigprocmask(SIG_UNBLOCK, &sleep_mask, NULL); */
     }
 }
 
@@ -88,13 +87,13 @@ descrizione
 void set_signals () {
     struct sigaction sa;
 
-    sigemptyset(&sleep_mask);
-    sigaddset(&sleep_mask, SIGCONT);
+    /* sigemptyset(&sleep_mask);
+    sigaddset(&sleep_mask, SIGCONT); */
 
     sigemptyset(&mask);
     sigaddset(&mask, SIGALRM);
     sigaddset(&mask, SIGINT);
-    sigaddset(&mask, SIGSTOP);
+    /* sigaddset(&mask, SIGSTOP); */
     sigaddset(&mask, SIGTERM);
     sa.sa_flags = SA_RESTART;
     sa.sa_mask = mask;
@@ -108,10 +107,10 @@ void set_signals () {
     sa.sa_handler = gen_req;
     sigaction(SIGALRM, &sa, NULL);
 
-    sigemptyset(&mask);
+    /* sigemptyset(&mask);
     sa.sa_mask = mask;
     sa.sa_handler = resume;
-    sigaction(SIGCONT, &sa, NULL);
+    sigaction(SIGCONT, &sa, NULL); */
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -126,9 +125,7 @@ void gen_req (int sig) {
         dest.c = rand() % SO_WIDTH;
     }while(map[dest.r][dest.c].is_hole || ( dest.r == p.r && dest.c == p.c));
 
-    /* P(map[p.r][p.c].req_access_sem, 0); */
-       if(write(map[p.r][p.c].req_pipe[W], &dest, sizeof(Pos)) < 0 && errno != EINTR) TEST_ERROR;
-    /* V(map[p.r][p.c].req_access_sem, 0); */
+    if(write(map[p.r][p.c].req_pipe[W], &dest, sizeof(Pos)) < 0 && errno != EINTR) TEST_ERROR;
 
     tot_reqs++;
 
@@ -152,8 +149,8 @@ void termination (int sig) {
 
     Z(sync_all);
 
-    exit(EXIT_SUCCESS);
+    exit(SOURCE_EXIT);
 }
 
-void resume (int sig) {/* do nothing */}
+/* void resume (int sig) {} */
  
