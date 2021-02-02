@@ -1,5 +1,5 @@
-#ifndef COMMON
-#define COMMON
+#ifndef _COMMON
+#define _COMMON
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -174,7 +174,7 @@ typedef struct {
 int         map_id;
 int*        map_row_ids;
 Cell*       map[SO_HEIGHT];
-sigset_t    mask;
+FILE*       logfile;
 int         sync_all;
 int         ledger_id;
 Ledger*     ledger;
