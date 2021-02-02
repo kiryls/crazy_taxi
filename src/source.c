@@ -3,12 +3,11 @@
 
 /* 
 ################################################################################################# 
-                                            MAIN
+                                            SOURCE
 descrizione
 ################################################################################################# 
 */
 int main(int argc, char const *argv[]) {
-    int i;
 
     srand(getpid());
     
@@ -20,19 +19,15 @@ int main(int argc, char const *argv[]) {
 
     while(1) {
         raise(SIGALRM);
-
-        /* sigprocmask(SIG_BLOCK, &sleep_mask, NULL); */
         sleep(2);
-        /* sigprocmask(SIG_UNBLOCK, &sleep_mask, NULL); */
     }
+
+    exit(EXIT_FAILURE);
 }
 
-/* 
-################################################################################################# 
-                                              INIT 
-descrizione
-################################################################################################# 
-*/
+
+
+
 void init (const char * argv[]) {
     int i;
 
@@ -51,49 +46,40 @@ void init (const char * argv[]) {
 
     ledger = shmat(ledger_id, NULL, 0);
 
-    /* map[p.r][p.c].req_access_sem = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600); */
-    /* semctl(map[p.r][p.c].update_traffic_sem, 0, SETVAL, 1); */
-
     close(map[p.r][p.c].req_pipe[R]);
 
-    logp = fopen("/home/kiryls/Documents/Coding/project/logs/src.log", "a");
+    logfile = fopen("/home/kiryls/Documents/Coding/project/logs/src.log", "a");
 }
 
-/* 
-################################################################################################# 
-                                           UTILITY
-descrizione
-################################################################################################# 
-*/
+
+
+
 void report () {
     P(ledger->source_section);
         ledger->tot_requests += tot_reqs;
     V(ledger->source_section);
 }
 
-void write_log(FILE * logp, Pos dest) {
-    fprintf(logp, "%d @ (%d,%d): (PPID=%d | PGID=%d) request #%d -> (%d,%d)\n",
+
+
+
+void write_log(Pos dest) {
+    fprintf(logfile, "%d @ (%d,%d): (PPID=%d | PGID=%d) request #%d -> (%d,%d)\n",
             getpid(), p.r+1, p.c+1,
             getppid(), getpgid(getpid()), 
             tot_reqs, dest.r+1, dest.c+1);
 }
 
-/* 
-################################################################################################# 
-                                           SIGNALS
-descrizione
-################################################################################################# 
-*/
+
+
+
 void set_signals () {
     struct sigaction sa;
-
-    /* sigemptyset(&sleep_mask);
-    sigaddset(&sleep_mask, SIGCONT); */
+    sigset_t mask;
 
     sigemptyset(&mask);
     sigaddset(&mask, SIGALRM);
     sigaddset(&mask, SIGINT);
-    /* sigaddset(&mask, SIGSTOP); */
     sigaddset(&mask, SIGTERM);
     sa.sa_flags = SA_RESTART;
     sa.sa_mask = mask;
@@ -106,14 +92,10 @@ void set_signals () {
     sa.sa_mask = mask;
     sa.sa_handler = gen_req;
     sigaction(SIGALRM, &sa, NULL);
-
-    /* sigemptyset(&mask);
-    sa.sa_mask = mask;
-    sa.sa_handler = resume;
-    sigaction(SIGCONT, &sa, NULL); */
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+
 
 void gen_req (int sig) {
     int i;
@@ -129,8 +111,11 @@ void gen_req (int sig) {
 
     tot_reqs++;
 
-    write_log(logp, dest);
+    write_log(dest);
 }
+
+
+
 
 void termination (int sig) {
     int i;
@@ -144,13 +129,12 @@ void termination (int sig) {
     report();
     if(shmdt(ledger)) TEST_ERROR;
 
-    fprintf(logp, "source (%d) terminated successfully\n\n", getpid());
-    fclose(logp);
+    fprintf(logfile, "source (%d) terminated successfully\n\n", getpid());
+    fclose(logfile);
 
     Z(sync_all);
 
     exit(SOURCE_EXIT);
 }
 
-/* void resume (int sig) {} */
  
