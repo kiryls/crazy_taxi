@@ -17,32 +17,31 @@ int main(int argc, char *argv[]) {
 
 
     if (load()) exit(EXIT_FAILURE);
-        printf("+ loading done\n");
+        fprintf(fp, "+ loading done\n");
 
     init_world();
-        printf("+ world created\n");
+        fprintf(fp, "+ world created\n");
 
     gen_sources();
-        printf("+ sources generated\n");
+        fprintf(fp, "+ sources generated\n");
 
     gen_taxi();
-        printf("+ taxi generated +++\n");
+        fprintf(fp, "+ taxi generated +++\n");
 
     gen_timer();
-        printf("+++ timer %d set +++\n", timer_id);
+        fprintf(fp, "+ timer (%d) set\n", timer_id);
 
     set_signals();
-        printf("+ signals set +++\n\n");
+        fprintf(fp, "+ signals set\n\n");
 
         printf("\t\t\t~~~ S T A R T ~~~ \n");
     simulate();
         printf("\t\t\t ~~~  E  N  D  ~~~ \n");
 
-        
     aftermath();
     
     unload();
-        printf("*** unloaded all structures ***\n");
+        fprintf(fp, "*** unloaded all structures ***\n");
 
     exit(EXIT_SUCCESS);
 }
@@ -54,7 +53,6 @@ descrizione
 ################################################################################################# 
 */
 int load(){
-    FILE * fp;
     char key[20];
     int i;
 
@@ -76,6 +74,8 @@ int load(){
     fscanf(fp, "%s %d\n", key, &config->SO_DURATION);
 
     fclose(fp);
+
+    fp = fopen("./logs/master.log", "w");
 
     /* creazione array ARGS per passare info ai processi creati */
     args = malloc(NARGS * sizeof(char *));
@@ -370,35 +370,44 @@ void simulate () {
     int child;
     int status;
 
-    /* Z(sync_all, -1); */
     P(sync_all);
 
-    while((child = wait(&status)) > 0 && semctl(sync_all, 0, GETVAL) == 0) {
+    while((child = wait(&status)) > 0 && semctl(sync_all, 0, GETVAL) == 0)
         if(WEXITSTATUS(status) == TAXI_ABORT) respawn();
-        else fprintf(stderr, "||| %s %d unexpectedly exited with code %d|||\n", child == timer_id ? "timer" : "taxi", child, WEXITSTATUS(status));
-    }
+    
 
     if(killpg(child_gpid, SIGTERM) < 0) TEST_ERROR;
 
-    if(waitpid(timer_id, &status, 0) > 0) {
-        printf("*** timer %d done ***\n", timer_id);
-    }
-
     P(sync_all);
-    /* Z(sync_all, -1); */
 
     while((child = wait(&status)) > 0) {
+
         switch (WEXITSTATUS(status)) {
-            case EXIT_SUCCESS:
+            case TAXI_ABORT: 
+                fprintf(fp, "- taxi %d aborted\n", child);
+                break;
+
+            case TAXI_EXIT: 
+                fprintf(fp, "- taxi %d exited\n", child);
+                break;
+
+            case TIMER_EXIT:
+                fprintf(fp, "- timer %d exited\n", child);
+                break;
+
             case SOURCE_EXIT: 
-                /* printf("*** child %d terminated successfully ***\n", child); */
+                fprintf(fp, "- source %d exited\n", child);
+                break;
+
+            case EXIT_SUCCESS:
+                fprintf(fp, "- child %d terminated\n", child);
                 break;
             default:
-                fprintf(stderr, "||| child %d unexpectedly exited = %d|||\n", child, WEXITSTATUS(status));
+                fprintf(fp, "- child %d exited with %d\n", child, WEXITSTATUS(status));
         }
     }
 
-    if(errno == ECHILD) printf("*** all children terminated successfully ***\n"); 
+    if(errno == ECHILD) fprintf(fp, "\n*** all children terminated successfully ***\n"); 
 
 }
 
@@ -474,22 +483,18 @@ void set_signals() {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void print_map_handler(int sig) {
-    /* killpg(child_gpid, SIGSTOP); */
-
-        print_map();
-        
-    /* killpg(child_gpid, SIGCONT); */
+    print_map(); 
 }
 
 void wrap_up(int sig) {
-    printf("--- TIME'S UP ---\n");
     V(sync_all);
 }
 
 /* 
 ################################################################################################# 
-                                          MAP PRINT
-descrizione
+                                          PRINT FACILITIES
+
+    
 ################################################################################################# 
 */
 void print_map () {
