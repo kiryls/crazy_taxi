@@ -1,27 +1,17 @@
+- controllo idoneita' del file config
 
-- ricordo di fare le top celle
+- tolgo la global var mask
 
 - controllo il return se tutto nullo in report()
 
-- BUG: una volta e' successo che una cella avesse traffico -1. 
-        controllare che i taxi facciano V() 
-
-- tolgo i semafori di accesso alle pipes (perche' molto prob non servono)
-    (li trasformo in semafori per incrementare il traffico delle celle)
-
-- taxi/source/timer hanno exit status differenti
-
-
 - i taxi chiudono la pipe delle richieste (R) dopo che hanno accettato e sono partiti
 
+- TEST_ERROR deve stare dentro i rispettivi if
 
 - ??? altro ???
 
 #############################################################################
 - tutti i taxi e il master devono fare detach dalla shared var START 
-- (((rivedo le malloc per array args (in source.c:131))))
-- deallocazione, detach delle strutture dati
-- TEST_ERROR deve stare dentro i rispettivi if!!!
 - verifico che tutti i processi abbiano fatto detach e close pipe
 - pensiamo ad un posto migliore per la generazione delle pipe 
         e nella chiusura dei file descriptor per il master
