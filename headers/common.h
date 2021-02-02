@@ -21,9 +21,15 @@
 #include <sys/shm.h>
 #include <sys/stat.h>
 
+#define CUSTOM 1
 #define DENSE 1
 #define STYLE 1
 
+#if CUSTOM
+    #define SO_HEIGHT 6
+    #define SO_WIDTH 8
+    #define CONFIG "./config/config_custom.txt"
+#else
 #if DENSE
     #define SO_HEIGHT 10
     #define SO_WIDTH 20
@@ -33,6 +39,8 @@
     #define SO_HEIGHT 20 
     #define SO_WIDTH  60
     #define CONFIG "./config/config_large.txt"
+#endif
+
 #endif
 
 #if STYLE
@@ -48,12 +56,12 @@
 #endif
 
 #define TAXI_ABORT 3
-#define SOURCE_EXIT 4
-#define TIMER_EXIT 5
+#define TAXI_EXIT 4
+#define SOURCE_EXIT 5
+#define TIMER_EXIT 6
 #define R 0 /* READ form pipe */
 #define W 1 /* WRITE to pipe */
 #define NARGS 8
-
 
 #define TEST_ERROR    if (errno) {dprintf(STDERR_FILENO, \
 					  "%s:%d: PID=%5d: Error %d (%s)\n", \
@@ -63,21 +71,7 @@
 					  errno,			\
 					  strerror(errno)); }
 
-typedef struct {
-    int is_hole; /* 1 se edificio, 0 altrimenti */
-    int source_pid; /* pid source oppure 0 */
-    int req_pipe[2]; /* descrittori read/write della pipe richieste */
-    int cap_semid; /* semaforo della capienza */
-    int cell_cap; 
-    int travel_time;
-    int update_traffic_sem; /* semaforo per aggiornare il traffico in una cella */
-    int traffic;
-} Cell;
 
-typedef struct {
-    int r;
-    int c;
-} Pos;
 
 typedef struct {    
     int SO_TAXI; 
@@ -93,13 +87,55 @@ typedef struct {
 } Config;
 
 typedef struct {
+    int r;
+    int c;
+} Pos;
+
+/* 
+################################################################################################# 
+                                            CELLA
+
+    Ogni cella della matrice e' una struttura dati che permette di memorizzare info sul
+    traffico, sulle caratteristiche (sorgente, edificio o vuota). Contiene ID di semafori
+    e pipes per sincronizzare e far dialogare i processi taxi e le sorgenti. 
+################################################################################################# 
+*/
+typedef struct {
+    int is_hole;
+    int source_pid; 
+    int req_pipe[2]; 
+    int cap_semid;
+    int cell_cap; 
+    int travel_time;
+    int update_traffic_sem; 
+    int traffic;
+} Cell;
+
+/* 
+################################################################################################# 
+                                            REPORT
+    
+    Il report che ogni taxi compila durante il suo ciclo di vita. E' come una scatola nera
+    contenente informazioni che serviranno per aggiornare le statistiche globali della 
+    simulazione.
+################################################################################################# 
+*/
+typedef struct {
     pid_t           taxi_id;
     int             tot_length;
-    /* struct timespec tot_time; */
     float           time;
     int             completed_rides; 
 } Report;
 
+/* 
+################################################################################################# 
+                                            LEDGER
+     
+    Il registro in cui vengono depositate le informazioni riguardanti la simulazione. Viene
+    aggiornato in modo concorrenziale e mantenuto condiviso tra tutti i processi della
+    simulazione (i.e. master, source & taxi).
+################################################################################################# 
+*/
 typedef struct {
     int source_section;
     int tot_requests;
@@ -114,13 +150,27 @@ typedef struct {
     Report most_rides;
 } Ledger;
 
+/* 
+################################################################################################# 
+                                            TOP
+     
+    Le celle che vengono registrate in questa struttura sono un sottoinsieme di celle della
+    matrice attraverso cui sono passati piu' taxi.
+################################################################################################# 
+*/
 typedef struct {
     int val;
     Pos p;
 } Top;
 
-/* global vars */
-
+/* 
+################################################################################################# 
+                                            GLOBAL VARS
+     
+    Principalmente sono ID di strutture dati e semafori che verranno condivise tra tutti i
+    processi.
+################################################################################################# 
+*/
 int         map_id;
 int*        map_row_ids;
 Cell*       map[SO_HEIGHT];
@@ -130,9 +180,25 @@ int         ledger_id;
 Ledger*     ledger;
 Top*        tops;
 
-void    P (int semaphore);
-void    V (int semaphore);
-void    Z (int semaphore);
+/* 
+################################################################################################# 
+                                    HOLD & RELEASE SEMAPHORES
+
+    Wrapper dei metodi per impegnare/rilasciare un certo semaforo.
+################################################################################################# 
+*/
+void P (int semaphore);
+void V (int semaphore);
+
+/* 
+################################################################################################# 
+                                        ZERO SEMAPHORE
+
+    Questa funzione ha l'unico scopo di sospendere un processo in attesa che il semaforo
+    diventi nullo.
+################################################################################################# 
+*/
+void Z (int semaphore);
 
 #endif 
 
