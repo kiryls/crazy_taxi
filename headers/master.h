@@ -5,6 +5,7 @@ Config*     config;
 char**      args;
 pid_t       child_gpid;
 pid_t       timer_id;
+FILE*       fp;
 
 int     load ();
 void    unload ();
