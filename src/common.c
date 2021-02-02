@@ -1,11 +1,5 @@
 #include "../headers/common.h"
 
-/* 
-################################################################################################# 
-                                    SEMAPHORE HANDLING
-descrizione
-################################################################################################# 
-*/
 void P (int semaphore) {
     struct sembuf op;
     op.sem_flg = 0;
@@ -13,7 +7,6 @@ void P (int semaphore) {
     op.sem_op = -1;
 
     semop(semaphore, &op, 1);
-    /* printf("P(%d): %d\n", semaphore, getpid()); */
 }
 
 void V (int semaphore) {
@@ -23,15 +16,8 @@ void V (int semaphore) {
     op.sem_op = 1;
 
     semop(semaphore, &op, 1);
-    /* printf("V(%d): %d\n", semaphore, getpid()); */
 }
 
-/* 
-################################################################################################# 
-                                        SIMULATION SYNC
-descrizione
-################################################################################################# 
-*/
 void Z (int semaphore){
     struct sembuf op;
 
@@ -39,7 +25,6 @@ void Z (int semaphore){
     op.sem_flg = 0;
     op.sem_op = 0;
    
-    /* while(semop(semaphore, &sop, 1) == -1 && errno != EINTR) TEST_ERROR; */
     semop(semaphore, &op, 1);
 } 
 
