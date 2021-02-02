@@ -70,11 +70,11 @@ void write_log(FILE * logp) {
 }
 
 void report() {
-    if(on_duty) fprintf(logp, "%d on duty (%d,%d) --> (%d,%d): Tot cells=%d | Tot time=%.3f | Tot rides=%d\n", 
+    if(on_duty) fprintf(logp, "%d **on duty** (%d,%d) --> (%d,%d): Tot cells=%d | Tot time=%.3f | Tot rides=%d\n", 
                             rep.taxi_id, p.r+1, p.c+1, dest.r+1, dest.c+1, rep.tot_length, 
                             rep.time, rep.completed_rides);
 
-    else fprintf(logp, "%d on (%d,%d): Tot cells=%d | Tot time=%.3f | Tot rides=%d\n", 
+    else fprintf(logp, "%d **off duty** (%d,%d): Tot cells=%d | Tot time=%.3f | Tot rides=%d\n", 
                             rep.taxi_id, p.r+1, p.c+1, rep.tot_length, 
                             rep.time, rep.completed_rides);
 
@@ -119,7 +119,6 @@ void pretend_doing (int sec) {
     sigdelset(&m, SIGQUIT);
     sigdelset(&m, SIGINT);
     sigdelset(&m, SIGALRM);
-    /* sigdelset(&m, SIGSTOP); */
 
     sigprocmask(SIG_BLOCK, &m, NULL);
 
@@ -129,10 +128,7 @@ void pretend_doing (int sec) {
 }
 
 void get_req () {
-    /* P(map[p.r][p.c].req_access_sem, 0); */
     if(read(map[p.r][p.c].req_pipe[R], &dest, sizeof(Pos)) < 0 && errno != EINTR) TEST_ERROR;
-
-    /* V(map[p.r][p.c].req_access_sem, 0); */
 
     fprintf(logp, "%d (%d,%d) ==> (%d,%d)\n", getpid(), p.r+1, p.c+1 , dest.r+1, dest.c+1);
 }
@@ -305,7 +301,7 @@ void termination (int sig) {
         case SIGALRM: exit(TAXI_ABORT);
 
         case SIGINT:
-        case SIGTERM: exit(EXIT_SUCCESS);
+        case SIGTERM: exit(TAXI_EXIT);
         
         default: exit(EXIT_FAILURE);
     }
