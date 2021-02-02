@@ -3,36 +3,30 @@
 
 /* 
 ################################################################################################# 
-                                            MAIN
+                                            MASTER
 descrizione
 ################################################################################################# 
 */
-int main(int argc, char *argv[]) {
-
-    int i, j;
-    int status;
-    int child;
-    
+int main(int argc, char *argv[]) {    
     srand(time(NULL));
 
-
     if (load()) exit(EXIT_FAILURE);
-        fprintf(fp, "+ loading done\n");
+        fprintf(logfile, "+ loading done\n");
 
     init_world();
-        fprintf(fp, "+ world created\n");
+        fprintf(logfile, "+ world created\n");
 
     gen_sources();
-        fprintf(fp, "+ sources generated\n");
+        fprintf(logfile, "+ sources generated\n");
 
     gen_taxi();
-        fprintf(fp, "+ taxi generated +++\n");
+        fprintf(logfile, "+ taxi generated +++\n");
 
     gen_timer();
-        fprintf(fp, "+ timer (%d) set\n", timer_id);
+        fprintf(logfile, "+ timer (%d) set\n", timer_id);
 
     set_signals();
-        fprintf(fp, "+ signals set\n\n");
+        fprintf(logfile, "+ signals set\n\n");
 
         printf("\t\t\t~~~ S T A R T ~~~ \n");
     simulate();
@@ -41,41 +35,39 @@ int main(int argc, char *argv[]) {
     aftermath();
     
     unload();
-        fprintf(fp, "*** unloaded all structures ***\n");
+        fprintf(logfile, "*** unloaded all structures ***\n");
 
     exit(EXIT_SUCCESS);
 }
 
-/* 
-################################################################################################# 
-                                          LOAD & UNLOAD
-descrizione
-################################################################################################# 
-*/
+
+
+
 int load(){
     char key[20];
     int i;
 
-    fp = fopen(CONFIG, "r");
-    if(fp == NULL) return 1; 
+    settings = fopen(CONFIG, "r");
+    if(settings == NULL) return 1; 
     
     config = (Config *) malloc(sizeof(Config));
     if(config == NULL) return 1;
 
-    fscanf(fp, "%s %d\n", key, &config->SO_TAXI);
-    fscanf(fp, "%s %d\n", key, &config->SO_SOURCES);
-    fscanf(fp, "%s %d\n", key, &config->SO_HOLES);
-    fscanf(fp, "%s %d\n", key, &config->SO_TOP_CELLS);
-    fscanf(fp, "%s %d\n", key, &config->SO_CAP_MIN);
-    fscanf(fp, "%s %d\n", key, &config->SO_CAP_MAX);
-    fscanf(fp, "%s %d\n", key, &config->SO_TIMENSEC_MIN);
-    fscanf(fp, "%s %d\n", key, &config->SO_TIMENSEC_MAX);
-    fscanf(fp, "%s %d\n", key, &config->SO_TIMEOUT);
-    fscanf(fp, "%s %d\n", key, &config->SO_DURATION);
+    fscanf(settings, "%s %d\n", key, &config->SO_TAXI);
+    fscanf(settings, "%s %d\n", key, &config->SO_SOURCES);
+    fscanf(settings, "%s %d\n", key, &config->SO_HOLES);
+    fscanf(settings, "%s %d\n", key, &config->SO_TOP_CELLS);
+    fscanf(settings, "%s %d\n", key, &config->SO_CAP_MIN);
+    fscanf(settings, "%s %d\n", key, &config->SO_CAP_MAX);
+    fscanf(settings, "%s %d\n", key, &config->SO_TIMENSEC_MIN);
+    fscanf(settings, "%s %d\n", key, &config->SO_TIMENSEC_MAX);
+    fscanf(settings, "%s %d\n", key, &config->SO_TIMEOUT);
+    fscanf(settings, "%s %d\n", key, &config->SO_DURATION);
 
-    fclose(fp);
+    fclose(settings);
 
-    fp = fopen("./logs/master.log", "w");
+    logfile = fopen("./logs/master.log", "w");
+    if(logfile == NULL) return 1;
 
     /* creazione array ARGS per passare info ai processi creati */
     args = malloc(NARGS * sizeof(char *));
@@ -99,7 +91,9 @@ int load(){
     return 0;
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+
+
 void unload () {
     int i, j;
     int ret;
@@ -139,12 +133,9 @@ void unload () {
     free(tops);
 }
 
-/* 
-################################################################################################# 
-                                           INIT WORLD
-descrizione
-################################################################################################# 
-*/
+
+
+
 void init_world () {
     int i, j;
 
@@ -185,7 +176,8 @@ void init_world () {
     }
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+
 
 void gen_holes() {
     int i, j; 
@@ -204,7 +196,8 @@ void gen_holes() {
     }
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+
 
 int check_hole(int r, int c){
     int i, j;
@@ -220,12 +213,8 @@ int check_hole(int r, int c){
     return 1;
 }
 
-/* 
-################################################################################################# 
-                                            PROCESSES
-descrizione
-################################################################################################# 
-*/
+
+
 
 void gen_timer () {
     int exec_ret;
@@ -248,7 +237,8 @@ void gen_timer () {
     }
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+
 
 void gen_sources () {
     int count, child_pid;
@@ -286,8 +276,8 @@ void gen_sources () {
                     map[i][j].source_pid = child_pid;
                     close(map[i][j].req_pipe[W]);
 
-                    if(count == 0) child_gpid = child_pid; /* set first source as group leader */
-                    setpgid(child_pid, child_gpid); /* set all sources in the same group */
+                    if(count == 0) child_gpid = child_pid; /* set first source as child group leader */
+                    setpgid(child_pid, child_gpid);
                     break;
             }
 
@@ -296,7 +286,8 @@ void gen_sources () {
     }
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+
 
 void gen_taxi () { 
     int i, j, count, child_pid;
@@ -309,12 +300,14 @@ void gen_taxi () {
 
         if(semctl(map[i][j].cap_semid, 0, GETVAL) > 0 && !map[i][j].is_hole) {
             child_pid = gen_one_taxi(i, j);
-            /* setpgid(child_pid, child_gpid); */
             count++;
         }
 
     }
 }
+
+
+
 
 int gen_one_taxi (int i, int j) {
     int child_pid, exec_ret;
@@ -346,7 +339,8 @@ int gen_one_taxi (int i, int j) {
     }
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+
 
 void respawn () {
     int i, j, child;
@@ -359,12 +353,9 @@ void respawn () {
     child = gen_one_taxi(i, j);
 }
 
-/* 
-################################################################################################# 
-                                          SIMULATION
-descrizione
-################################################################################################# 
-*/
+
+
+
 void simulate () {
     int i, j;
     int child;
@@ -384,39 +375,35 @@ void simulate () {
 
         switch (WEXITSTATUS(status)) {
             case TAXI_ABORT: 
-                fprintf(fp, "- taxi %d aborted\n", child);
+                fprintf(logfile, "- taxi %d aborted\n", child);
                 break;
 
             case TAXI_EXIT: 
-                fprintf(fp, "- taxi %d exited\n", child);
+                fprintf(logfile, "- taxi %d exited\n", child);
                 break;
 
             case TIMER_EXIT:
-                fprintf(fp, "- timer %d exited\n", child);
+                fprintf(logfile, "- timer %d exited\n", child);
                 break;
 
             case SOURCE_EXIT: 
-                fprintf(fp, "- source %d exited\n", child);
+                fprintf(logfile, "- source %d exited\n", child);
                 break;
 
             case EXIT_SUCCESS:
-                fprintf(fp, "- child %d terminated\n", child);
+                fprintf(logfile, "- child %d terminated\n", child);
                 break;
             default:
-                fprintf(fp, "- child %d exited with %d\n", child, WEXITSTATUS(status));
+                fprintf(logfile, "- child %d exited with %d\n", child, WEXITSTATUS(status));
         }
     }
 
-    if(errno == ECHILD) fprintf(fp, "\n*** all children terminated successfully ***\n"); 
+    if(errno == ECHILD) fprintf(logfile, "\n*** all children terminated successfully ***\n"); 
 
 }
 
-/* 
-################################################################################################# 
-                                            UTILITY
-descrizione
-################################################################################################# 
-*/
+
+
 
 void select_tops() {
     int i, j, count;
@@ -439,6 +426,9 @@ void select_tops() {
     
 }
 
+
+
+
 int is_top(int r, int c) {
     int i;
 
@@ -449,15 +439,12 @@ int is_top(int r, int c) {
     return 0;
 }
 
-/* 
-################################################################################################# 
-                                            SIGNALS
-descrizione
-################################################################################################# 
-*/
+
+
 
 void set_signals() {
     struct sigaction sa;
+    sigset_t mask;
 
     sigemptyset(&mask);
     sigaddset(&mask, SIGALRM);
@@ -480,23 +467,23 @@ void set_signals() {
     sigaction(SIGINT, &sa, NULL);
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+
 
 void print_map_handler(int sig) {
     print_map(); 
 }
 
+
+
+
 void wrap_up(int sig) {
     V(sync_all);
 }
 
-/* 
-################################################################################################# 
-                                          PRINT FACILITIES
 
-    
-################################################################################################# 
-*/
+
+
 void print_map () {
     int i, j;
     char s[4];
@@ -530,7 +517,8 @@ void print_map () {
     printf("\n\n");
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+
 
 void aftermath () {
     int i, j;
