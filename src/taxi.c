@@ -3,13 +3,12 @@
 
 /* 
 ################################################################################################# 
-                                            MAIN
+                                            TAXI
 descrizione
 ################################################################################################# 
 */
 int main(int argc, char const *argv[]) {
     
-    int i, j;
     sigset_t alarm_mask;
 
     set_signals();
@@ -23,12 +22,9 @@ int main(int argc, char const *argv[]) {
     exit(EXIT_FAILURE);
 }
 
-/* 
-################################################################################################# 
-                                              INIT 
-descrizione
-################################################################################################# 
-*/
+
+
+
 void init (const char * argv[]) {
     int i;
 
@@ -49,32 +45,28 @@ void init (const char * argv[]) {
     for(i = 0; i < SO_HEIGHT; i++) 
         map[i] = shmat(map_row_ids[i], NULL, 0);
 
-    logp = fopen("/home/kiryls/Documents/Coding/project/logs/taxi.log", "a");
+    logfile = fopen("/home/kiryls/Documents/Coding/project/logs/taxi.log", "a");
 
     ledger = shmat(ledger_id, NULL, 0);
 
-    write_log(logp);
+    write_log();
 }
 
-/* 
-################################################################################################# 
-                                           UTILITY
-descrizione
-################################################################################################# 
-*/
 
-void write_log(FILE * logp) {
-    fprintf(logp, "created %d @ (%d,%d): (PPID=%d | PGID=%d)\n",
+
+
+void write_log() {
+    fprintf(logfile, "created %d @ (%d,%d): (PPID=%d | PGID=%d)\n",
             getpid(), p.r+1, p.c+1,
             getppid(), getpgid(getpid()));
 }
 
 void report() {
-    if(on_duty) fprintf(logp, "%d **on duty** (%d,%d) --> (%d,%d): Tot cells=%d | Tot time=%.3f | Tot rides=%d\n", 
+    if(on_duty) fprintf(logfile, "%d **on duty** (%d,%d) --> (%d,%d): Tot cells=%d | Tot time=%.3f | Tot rides=%d\n", 
                             rep.taxi_id, p.r+1, p.c+1, dest.r+1, dest.c+1, rep.tot_length, 
                             rep.time, rep.completed_rides);
 
-    else fprintf(logp, "%d **off duty** (%d,%d): Tot cells=%d | Tot time=%.3f | Tot rides=%d\n", 
+    else fprintf(logfile, "%d **off duty** (%d,%d): Tot cells=%d | Tot time=%.3f | Tot rides=%d\n", 
                             rep.taxi_id, p.r+1, p.c+1, rep.tot_length, 
                             rep.time, rep.completed_rides);
 
@@ -113,25 +105,17 @@ void report() {
     V(ledger->taxi_section);
 }
 
-void pretend_doing (int sec) {
-    sigset_t m;
-    sigfillset(&m);
-    sigdelset(&m, SIGQUIT);
-    sigdelset(&m, SIGINT);
-    sigdelset(&m, SIGALRM);
 
-    sigprocmask(SIG_BLOCK, &m, NULL);
 
-        sleep(sec);
-
-    sigprocmask(SIG_UNBLOCK, &m, NULL);
-}
 
 void get_req () {
     if(read(map[p.r][p.c].req_pipe[R], &dest, sizeof(Pos)) < 0 && errno != EINTR) TEST_ERROR;
 
-    fprintf(logp, "%d (%d,%d) ==> (%d,%d)\n", getpid(), p.r+1, p.c+1 , dest.r+1, dest.c+1);
+    fprintf(logfile, "%d (%d,%d) ==> (%d,%d)\n", getpid(), p.r+1, p.c+1 , dest.r+1, dest.c+1);
 }
+
+
+
 
 Dir get_direction(){
     int dR, dC;
@@ -140,9 +124,7 @@ Dir get_direction(){
     dR = (dest.r - p.r);
     dC = (dest.c - p.c);
 
-
     if (dR == 0 && dC == 0) return NO;
-
 
     /* e' piu' urgente andare in verticale o in orizzontale ? */
     if(ABS(dC) > ABS(dR)) direction = (dC>0) * RIGHT + (dC<=0) * LEFT;
@@ -183,41 +165,43 @@ Dir get_direction(){
             if(p.c + 1 > SO_WIDTH-1) return LEFT;
             break;
     }
-
     return direction;
 }
 
-/* 
-################################################################################################# 
-                                           MOVEMENT
-descrizione
-################################################################################################# 
-*/
+
 
 
 void travel () {
     Dir dir;
-    float t;
-
-    alarm(TIMEOUT); 
+    float ride_time;
+    struct timespec time;
 
     on_duty = 0;
 
-    if(map[p.r][p.c].source_pid > 0) { get_req(); alarm(0); on_duty = 1; } 
-    else { alarm(0); sleep(1); raise(SIGALRM); }
+    time.tv_nsec = map[p.r][p.c].travel_time;
+    time.tv_sec  = 0;
+    nanosleep(&time, (struct timespec *) NULL);
 
-    t = 0;
+    alarm(TIMEOUT); 
+
+    if(map[p.r][p.c].source_pid > 0) { get_req(); alarm(0); on_duty = 1; } 
+    else raise(SIGALRM); 
+
+    ride_time = 0;
 
     while((dir = get_direction()) != NO) {
         move(dir);
 
         rep.tot_length++;
-        t += (float) map[p.r][p.c].travel_time / 1000000000;
+        ride_time += (float) map[p.r][p.c].travel_time / 1000000000;
     }
 
-    if(t > rep.time) rep.time = t;
+    if(ride_time > rep.time) rep.time = ride_time;
     rep.completed_rides++;
 }
+
+
+
 
 void move (Dir dir) {
     struct timespec t;
@@ -248,35 +232,27 @@ void move (Dir dir) {
     V(map[p.r][p.c].update_traffic_sem);
 }
 
-/* 
-################################################################################################# 
-                                           SIGNALS
-descrizione
-################################################################################################# 
-*/
+
+
+
 void set_signals () {
     struct sigaction sa;
+    sigset_t mask;
 
     sigemptyset(&mask);
     sigaddset(&mask, SIGALRM);
     sigaddset(&mask, SIGSTOP);
     sigaddset(&mask, SIGTERM);
-    /* sigaddset(&mask, SIGINT); */
     sa.sa_flags = 0;
     sa.sa_mask = mask;
     sa.sa_handler = termination;
     sigaction(SIGALRM, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
-
-    sigemptyset(&mask);
-    sa.sa_mask = mask;
-    sa.sa_flags = SA_RESTART;
-    sa.sa_handler = resume;
-    sigaction(SIGCONT, &sa, NULL);
 }
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+
 
 void termination (int sig) {
     int i;
@@ -292,8 +268,8 @@ void termination (int sig) {
     report();
     if(shmdt(ledger)) TEST_ERROR;
 
-    fprintf(logp, "unloaded %d\n\n", getpid());
-    fclose(logp);
+    fprintf(logfile, "unloaded %d\n\n", getpid());
+    fclose(logfile);
 
     Z(sync_all);
 
@@ -306,6 +282,3 @@ void termination (int sig) {
         default: exit(EXIT_FAILURE);
     }
 }
-
- 
-void resume (int sig) {/* do nothing */}
