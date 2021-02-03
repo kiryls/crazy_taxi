@@ -45,7 +45,7 @@ void init (const char * argv[]) {
     for(i = 0; i < SO_HEIGHT; i++) 
         map[i] = shmat(map_row_ids[i], NULL, 0);
 
-    logfile = fopen("/home/kiryls/Documents/Coding/project/logs/taxi.log", "a");
+    logfile = fopen("./logs/taxi.log", "a");
 
     ledger = shmat(ledger_id, NULL, 0);
 

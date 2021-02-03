@@ -48,7 +48,7 @@ void init (const char * argv[]) {
 
     close(map[p.r][p.c].req_pipe[R]);
 
-    logfile = fopen("/home/kiryls/Documents/Coding/project/logs/src.log", "a");
+    logfile = fopen("./logs/src.log", "a");
 }
 
 
