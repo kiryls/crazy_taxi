@@ -1,5 +1,8 @@
 #include "../headers/common.h"
 
+
+
+
 void P (int semaphore) {
     struct sembuf op;
     op.sem_flg = 0;
@@ -9,6 +12,9 @@ void P (int semaphore) {
     semop(semaphore, &op, 1);
 }
 
+
+
+
 void V (int semaphore) {
     struct sembuf op;
     op.sem_flg = 0;
@@ -17,6 +23,9 @@ void V (int semaphore) {
 
     semop(semaphore, &op, 1);
 }
+
+
+
 
 void Z (int semaphore){
     struct sembuf op;

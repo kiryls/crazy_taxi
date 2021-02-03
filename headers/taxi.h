@@ -1,3 +1,14 @@
+/* 
+################################################################################################# 
+                                            TAXI
+
+    Sono i processi piu' variabili all'interno della simulazione. Il loro unico scopo e' 
+    quello di tentare di ottenere una richiesta da parte delle celle sorgenti e viaggiare
+    fino ad arrivare alla destinazione. Si utilizza un meccanismo di prevenzione del 
+    deadlock impostando degli allarmi ogni volta che un taxi fa un'attesa. 
+################################################################################################# 
+*/
+
 #ifndef _TAXI
 #define _TAXI
 
