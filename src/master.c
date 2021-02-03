@@ -1,12 +1,9 @@
 #include "../headers/common.h"
 #include "../headers/master.h"
 
-/* 
-################################################################################################# 
-                                            MASTER
-descrizione
-################################################################################################# 
-*/
+
+
+
 int main(int argc, char *argv[]) {    
     srand(time(NULL));
 
@@ -366,9 +363,8 @@ void simulate () {
     while((child = wait(&status)) > 0 && semctl(sync_all, 0, GETVAL) == 0)
         if(WEXITSTATUS(status) == TAXI_ABORT) respawn();
     
-
     if(killpg(child_gpid, SIGTERM) < 0) TEST_ERROR;
-
+    
     P(sync_all);
 
     while((child = wait(&status)) > 0) {
